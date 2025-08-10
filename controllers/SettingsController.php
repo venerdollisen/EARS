@@ -17,7 +17,13 @@ class SettingsController extends Controller {
     public function profile() {
         $this->requireAuth();
         
-        $user = $this->auth->getCurrentUser();
+        $currentUser = $this->auth->getCurrentUser();
+        
+        // Get complete user data including last_login from database
+        $sql = "SELECT id, username, full_name, email, role, status, created_at, updated_at, last_login FROM users WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$currentUser['id']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
         $this->render('settings/profile', [
             'user' => $user

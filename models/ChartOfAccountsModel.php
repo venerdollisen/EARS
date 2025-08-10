@@ -126,7 +126,7 @@ class ChartOfAccountsModel extends Model {
                     COALESCE(SUM(CASE WHEN t.transaction_type = 'credit' THEN t.amount ELSE 0 END), 0) as credits,
                     COALESCE(SUM(CASE WHEN t.transaction_type = 'debit' THEN t.amount ELSE 0 END), 0) as debits
                 FROM transactions t 
-                WHERE t.account_id = ? AND t.status = 'active'";
+                WHERE t.account_id = ? AND t.parent_transaction_id IS NOT NULL";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$accountId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -134,7 +134,7 @@ class ChartOfAccountsModel extends Model {
         return [
             'credits' => $result['credits'],
             'debits' => $result['debits'],
-            'balance' => $result['credits'] - $result['debits']
+            'balance' => $result['debits'] - $result['credits'] // Debits increase balance, credits decrease
         ];
     }
 }

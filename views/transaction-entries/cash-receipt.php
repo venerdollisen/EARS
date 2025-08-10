@@ -275,7 +275,6 @@ $(document).ready(function() {
         if (table.length > 0 && table.find('tbody tr').length > 0) {
             initializeTransactionsTable();
         } else {
-            console.log('Table not ready, retrying in 500ms...');
             setTimeout(function() {
                 initializeTransactionsTable();
             }, 500);
@@ -345,14 +344,14 @@ function addAccountRow() {
                     <?php endforeach; ?>
                 </select>
             </td>
-            <td>
-                <input type="number" class="form-control debit-amount" name="accounts[${accountRowCounter}][debit]" 
-                       step="0.01" min="0" placeholder="0.00" onchange="updateTotals()">
-            </td>
-            <td>
-                <input type="number" class="form-control credit-amount" name="accounts[${accountRowCounter}][credit]" 
-                       step="0.01" min="0" placeholder="0.00" onchange="updateTotals()">
-            </td>
+                    <td>
+            <input type="text" class="form-control debit-amount" name="accounts[${accountRowCounter}][debit]" 
+                   placeholder="0.00" onchange="updateTotals()" onblur="validateAmount(this)" onkeypress="validateNumericInput(event)">
+        </td>
+        <td>
+            <input type="text" class="form-control credit-amount" name="accounts[${accountRowCounter}][credit]" 
+                   placeholder="0.00" onchange="updateTotals()" onblur="validateAmount(this)" onkeypress="validateNumericInput(event)">
+        </td>
             <td>
                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAccountRow('${rowId}')">
                     <i class="bi bi-trash"></i>
@@ -420,9 +419,7 @@ function updateTotals() {
 function updateSummary() {
     const reference = $('#reference_no').val() || '-';
     const dateValue = $('#transaction_date').val();
-    console.log('Date value from field:', dateValue);
     const date = dateValue ? new Date(dateValue).toLocaleDateString('en-PH') : '-';
-    console.log('Formatted date:', date);
     const paymentForm = $('#payment_form option:selected').text() || '-';
     const totalDebit = parseFloat($('#totalDebit').text().replace('₱', '').replace(',', '')) || 0;
     
@@ -433,6 +430,39 @@ function updateSummary() {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }));
+}
+
+function validateAmount(input) {
+    // Ensure only 2 decimal places and proper rounding
+    let value = parseFloat(input.value) || 0;
+    value = Math.round(value * 100) / 100; // Round to 2 decimal places
+    input.value = value.toFixed(2);
+    updateTotals();
+}
+
+function validateNumericInput(event) {
+    const char = String.fromCharCode(event.which);
+    const input = event.target;
+    const value = input.value;
+    
+    // Allow: backspace, delete, tab, escape, enter, and navigation keys
+    if (event.keyCode === 8 || event.keyCode === 9 || event.keyCode === 27 || event.keyCode === 13 || 
+        (event.keyCode >= 35 && event.keyCode <= 40)) {
+        return;
+    }
+    
+    // Allow numbers
+    if (/\d/.test(char)) {
+        return;
+    }
+    
+    // Allow decimal point only if it's not already present
+    if (char === '.' && value.indexOf('.') === -1) {
+        return;
+    }
+    
+    // Prevent any other characters
+    event.preventDefault();
 }
 
 function checkBalance() {
@@ -554,7 +584,9 @@ function saveTransaction() {
                 
                 // Refresh recent transactions list without reloading the page
                 // Add a tiny delay and cache-bust to avoid stale cached responses
-                setTimeout(function(){ loadRecentTransactions(true); }, 150);
+                setTimeout(function(){ 
+                    loadRecentTransactions(true); 
+                }, 150);
             } else {
                 EARS.showAlert(response.message || response.error || 'Failed to record transaction', 'danger', '#globalAlertContainer');
             }
@@ -571,6 +603,7 @@ function saveTransaction() {
 
 function loadRecentTransactions(bustCache = false) {
     const apiUrl = APP_URL + '/api/cash-receipt/recent' + (bustCache ? ('?t=' + Date.now()) : '');
+    
     $.ajax({
         url: apiUrl,
         method: 'GET',
@@ -609,11 +642,17 @@ function loadRecentTransactions(bustCache = false) {
                     if ($.fn.dataTable && $.fn.dataTable.ext) {
                         $.fn.dataTable.ext.search = [];
                     }
-                } catch (e) {}
+                } catch (e) {
+                    // Silently handle filter clearing errors
+                }
 
                 // Destroy DT if present, replace tbody HTML, re-init DT, then draw
                 if (isDT) {
-                    try { table.DataTable().clear().destroy(); } catch (e) {}
+                    try { 
+                        table.DataTable().clear().destroy(); 
+                    } catch (e) {
+                        // Silently handle DataTable destruction errors
+                    }
                 }
                 const tbody = table.find('tbody');
                 tbody.html(html || `<tr><td colspan="7" class="text-center text-muted">No recent cash receipts</td></tr>`);
@@ -628,9 +667,8 @@ function loadRecentTransactions(bustCache = false) {
                 });
             }
         },
-        error: function() {
-            // Silently fail for recent transactions
-            console.log('Failed to load recent transactions');
+        error: function(xhr, status, error) {
+            // Silently handle errors for recent transactions loading
         }
     });
 }
@@ -650,7 +688,6 @@ function initializeTransactionsTable() {
     // Check if table exists
     const table = $('#transactionsTable');
     if (table.length === 0) {
-        console.error('Transactions table not found');
         return;
     }
 
@@ -659,7 +696,7 @@ function initializeTransactionsTable() {
         try {
             $('#transactionsTable').DataTable().destroy();
         } catch (error) {
-            console.warn('Error destroying existing DataTable:', error);
+            // Silently handle DataTable destruction errors
         }
     }
     
@@ -806,7 +843,7 @@ function viewTransactionDetails(transactionId) {
                     errorMessage = response.error;
                 }
             } catch (e) {
-                console.error('Failed to parse error response:', e);
+                // Silently handle JSON parsing errors
             }
             
             $('#transactionModalBody').html(`

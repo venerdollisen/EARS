@@ -176,7 +176,14 @@ $lastName = $nameParts[1] ?? '';
                 <div class="mb-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <span>Last Login</span>
-                        <small class="text-muted"><?= ($user['last_login'] ?? null) ? date('M d, Y H:i', strtotime($user['last_login'])) : 'Never' ?></small>
+                        <small class="text-muted">
+                            <?php if ($user['last_login'] ?? null): ?>
+                                <?= date('M d, Y', strtotime($user['last_login'])) ?><br>
+                                <span class="text-muted"><?= date('g:i A', strtotime($user['last_login'])) ?></span>
+                            <?php else: ?>
+                                Never
+                            <?php endif; ?>
+                        </small>
                     </div>
                 </div>
             </div>

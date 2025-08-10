@@ -284,7 +284,7 @@ class TransactionModel extends Model {
                 
                 if ($debit > 0) {
                     $debitTransaction = [
-                        'transaction_type' => "",
+                        'transaction_type' => "debit",
                         'reference_no' => ($data['reference_no'] ?? $data['voucher_number']) . '-D' . $accountId . '-' . rand(100, 999),
                         'transaction_date' => $data['transaction_date'],
                         'amount' => $debit,
@@ -310,7 +310,7 @@ class TransactionModel extends Model {
                 
                 if ($credit > 0) {
                     $creditTransaction = [
-                        'transaction_type' => "",
+                        'transaction_type' => "credit",
                         'reference_no' => ($data['reference_no'] ?? $data['voucher_number']) . '-C' . $accountId . '-' . rand(100, 999),
                         'transaction_date' => $data['transaction_date'],
                         'amount' => $credit,

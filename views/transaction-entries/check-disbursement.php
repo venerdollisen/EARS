@@ -261,8 +261,8 @@ function addAccountRow(){
                 <?php endforeach; ?>
             </select>
             </td>
-        <td><input type="number" class="form-control debit-amount" name="accounts[${currentRowIndex}][debit]" step="0.01" min="0" placeholder="0.00" onchange="calculateTotals()"></td>
-        <td><input type="number" class="form-control credit-amount" name="accounts[${currentRowIndex}][credit]" step="0.01" min="0" placeholder="0.00" onchange="calculateTotals()"></td>
+        <td><input type="text" class="form-control debit-amount" name="accounts[${currentRowIndex}][debit]" placeholder="0.00" onchange="calculateTotals()" onblur="validateAmount(this)" onkeypress="validateNumericInput(event)"></td>
+        <td><input type="text" class="form-control credit-amount" name="accounts[${currentRowIndex}][credit]" placeholder="0.00" onchange="calculateTotals()" onblur="validateAmount(this)" onkeypress="validateNumericInput(event)"></td>
         <td>
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAccountRow(${currentRowIndex})"><i class="bi bi-trash"></i></button>
         </td>`;
@@ -289,10 +289,51 @@ function calculateTotals(){
     
     document.getElementById('totalDebit').textContent = '₱' + totalDebit.toLocaleString('en-PH', { minimumFractionDigits: 2 });
     document.getElementById('totalCredit').textContent = '₱' + totalCredit.toLocaleString('en-PH', { minimumFractionDigits: 2 });
-    const diff = Math.abs(totalDebit - totalCredit);
-    const lbl = document.getElementById('balanceLabel');
-    if (diff < 0.01){ lbl.classList.remove('text-danger'); lbl.classList.add('text-success'); lbl.textContent='BALANCED'; }
-    else { lbl.classList.remove('text-success'); lbl.classList.add('text-danger'); lbl.textContent='UNBALANCED'; }
+    // Update balance label
+    const difference = Math.abs(totalDebit - totalCredit);
+    const balanceLabel = document.getElementById('balanceLabel');
+    if (difference < 0.01) {
+        balanceLabel.classList.remove('text-danger');
+        balanceLabel.classList.add('text-success');
+        balanceLabel.textContent = 'BALANCED';
+    } else {
+        balanceLabel.classList.remove('text-success');
+        balanceLabel.classList.add('text-danger');
+        balanceLabel.textContent = 'UNBALANCED';
+    }
+}
+
+function validateAmount(input) {
+    // Ensure only 2 decimal places and proper rounding
+    let value = parseFloat(input.value) || 0;
+    value = Math.round(value * 100) / 100; // Round to 2 decimal places
+    input.value = value.toFixed(2);
+    calculateTotals();
+}
+
+function validateNumericInput(event) {
+    const char = String.fromCharCode(event.which);
+    const input = event.target;
+    const value = input.value;
+    
+    // Allow: backspace, delete, tab, escape, enter, and navigation keys
+    if (event.keyCode === 8 || event.keyCode === 9 || event.keyCode === 27 || event.keyCode === 13 || 
+        (event.keyCode >= 35 && event.keyCode <= 40)) {
+        return;
+    }
+    
+    // Allow numbers
+    if (/\d/.test(char)) {
+        return;
+    }
+    
+    // Allow decimal point only if it's not already present
+    if (char === '.' && value.indexOf('.') === -1) {
+        return;
+    }
+    
+    // Prevent any other characters
+    event.preventDefault();
 }
 
 function saveTransaction(){

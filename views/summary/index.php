@@ -35,7 +35,6 @@
                             <div class="btn-group" role="group">
                                 <button class="btn btn-outline-secondary" onclick="quickRange('month')">This Month</button>
                                 <button class="btn btn-outline-secondary" onclick="quickRange('quarter')">This Quarter</button>
-                                <button class="btn btn-outline-secondary" onclick="quickRange('fiscal')">Fiscal Year</button>
                                 <button class="btn btn-outline-secondary" onclick="quickRange('year')">This Year</button>
                             </div>
                         </div>
@@ -78,9 +77,9 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Disbursements</div>
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Cash Disbursement</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ₱<?php echo number_format($summaryData['overall']['total_disbursements'], 2); ?>
+                                ₱<?php echo number_format($summaryData['cash_disbursement']['total_amount'], 2); ?>
                             </div>
                         </div>
                         <div class="col-auto">
@@ -96,13 +95,13 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Net Cash Flow</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800 <?php echo $summaryData['overall']['net_cash_flow'] >= 0 ? 'text-success' : 'text-danger'; ?>">
-                                ₱<?php echo number_format($summaryData['overall']['net_cash_flow'], 2); ?>
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Check Disbursement</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                ₱<?php echo number_format($summaryData['check_disbursement']['total_amount'], 2); ?>
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-graph-up fa-2x text-gray-300"></i>
+                            <i class="bi bi-receipt fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -539,13 +538,10 @@ function loadOverview() {
         // Update numbers on the cards
         // Total Receipts
         $(".card:contains('Total Receipts') .h5").text('₱' + numberFormat(d.total_receipts));
-        // Total Disbursements
-        $(".card:contains('Total Disbursements') .h5").text('₱' + numberFormat(d.total_disbursements));
-        // Net Cash Flow
-        const netEl = $(".card:contains('Net Cash Flow') .h5");
-        netEl.text('₱' + numberFormat(d.net_cash_flow));
-        netEl.toggleClass('text-success', d.net_cash_flow >= 0);
-        netEl.toggleClass('text-danger', d.net_cash_flow < 0);
+        // Total Cash Disbursement
+        $(".card:contains('Total Cash Disbursement') .h5").text('₱' + numberFormat(d.cash_disbursement_total));
+        // Total Check Disbursement
+        $(".card:contains('Total Check Disbursement') .h5").text('₱' + numberFormat(d.check_disbursement_total));
         // Total Transactions
         $(".card:contains('Total Transactions') .h5").text(numberFormat(d.total_transactions));
     });

@@ -49,93 +49,18 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <h6 class="text-primary mb-3">System Preferences</h6>
+                            <h6 class="text-primary mb-3">Year Configuration</h6>
                             
                             <div class="mb-3">
-                                <label for="default_currency" class="form-label">Default Currency</label>
-                                <select class="form-select" id="default_currency" name="default_currency">
-                                    <option value="PHP" <?= getParameterValue($parameters, 'default_currency') === 'PHP' ? 'selected' : '' ?>>Philippine Peso (PHP)</option>
-                                    <option value="USD" <?= getParameterValue($parameters, 'default_currency') === 'USD' ? 'selected' : '' ?>>US Dollar (USD)</option>
-                                    <option value="EUR" <?= getParameterValue($parameters, 'default_currency') === 'EUR' ? 'selected' : '' ?>>Euro (EUR)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="decimal_places" class="form-label">Decimal Places</label>
-                                <select class="form-select" id="decimal_places" name="decimal_places">
-                                    <option value="0" <?= getParameterValue($parameters, 'decimal_places') === '0' ? 'selected' : '' ?>>0 (Whole numbers)</option>
-                                    <option value="2" <?= getParameterValue($parameters, 'decimal_places') === '2' ? 'selected' : '' ?>>2 (Standard)</option>
-                                    <option value="4" <?= getParameterValue($parameters, 'decimal_places') === '4' ? 'selected' : '' ?>>4 (Precise)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="date_format" class="form-label">Date Format</label>
-                                <select class="form-select" id="date_format" name="date_format">
-                                    <option value="Y-m-d" <?= getParameterValue($parameters, 'date_format') === 'Y-m-d' ? 'selected' : '' ?>>YYYY-MM-DD</option>
-                                    <option value="m/d/Y" <?= getParameterValue($parameters, 'date_format') === 'm/d/Y' ? 'selected' : '' ?>>MM/DD/YYYY</option>
-                                    <option value="d/m/Y" <?= getParameterValue($parameters, 'date_format') === 'd/m/Y' ? 'selected' : '' ?>>DD/MM/YYYY</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="timezone" class="form-label">Timezone</label>
-                                <select class="form-select" id="timezone" name="timezone">
-                                    <option value="Asia/Manila" <?= getParameterValue($parameters, 'timezone') === 'Asia/Manila' ? 'selected' : '' ?>>Asia/Manila (GMT+8)</option>
-                                    <option value="UTC" <?= getParameterValue($parameters, 'timezone') === 'UTC' ? 'selected' : '' ?>>UTC (GMT+0)</option>
-                                    <option value="America/New_York" <?= getParameterValue($parameters, 'timezone') === 'America/New_York' ? 'selected' : '' ?>>America/New_York (GMT-5)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-primary mb-3">Fiscal Year Settings</h6>
-                            
-                            <div class="mb-3">
-                                <label for="fiscal_year_start" class="form-label">Fiscal Year Start Date</label>
+                                <label for="fiscal_year_start" class="form-label">Year Start Date</label>
                                 <input type="date" class="form-control" id="fiscal_year_start" name="fiscal_year_start" 
                                        value="<?= htmlspecialchars(getParameterValue($parameters, 'fiscal_year_start')) ?>" required>
                             </div>
                             
                             <div class="mb-3">
-                                <label for="fiscal_year_end" class="form-label">Fiscal Year End Date</label>
+                                <label for="fiscal_year_end" class="form-label">Year End Date</label>
                                 <input type="date" class="form-control" id="fiscal_year_end" name="fiscal_year_end" 
                                        value="<?= htmlspecialchars(getParameterValue($parameters, 'fiscal_year_end')) ?>" required>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h6 class="text-primary mb-3">Display Settings</h6>
-                            
-                            <div class="mb-3">
-                                <label for="theme" class="form-label">Theme</label>
-                                <select class="form-select" id="theme" name="theme">
-                                    <option value="light" <?= getParameterValue($parameters, 'theme') === 'light' ? 'selected' : '' ?>>Light</option>
-                                    <option value="dark" <?= getParameterValue($parameters, 'theme') === 'dark' ? 'selected' : '' ?>>Dark</option>
-                                    <option value="auto" <?= getParameterValue($parameters, 'theme') === 'auto' ? 'selected' : '' ?>>Auto (System)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="language" class="form-label">Language</label>
-                                <select class="form-select" id="language" name="language">
-                                    <option value="en" <?= getParameterValue($parameters, 'language') === 'en' ? 'selected' : '' ?>>English</option>
-                                    <option value="tl" <?= getParameterValue($parameters, 'language') === 'tl' ? 'selected' : '' ?>>Tagalog</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="records_per_page" class="form-label">Records per Page</label>
-                                <select class="form-select" id="records_per_page" name="records_per_page">
-                                    <option value="10" <?= getParameterValue($parameters, 'records_per_page') === '10' ? 'selected' : '' ?>>10</option>
-                                    <option value="25" <?= getParameterValue($parameters, 'records_per_page') === '25' ? 'selected' : '' ?>>25</option>
-                                    <option value="50" <?= getParameterValue($parameters, 'records_per_page') === '50' ? 'selected' : '' ?>>50</option>
-                                    <option value="100" <?= getParameterValue($parameters, 'records_per_page') === '100' ? 'selected' : '' ?>>100</option>
-                                </select>
                             </div>
                         </div>
                     </div>
@@ -164,15 +89,8 @@ function saveGeneralSettings() {
         { name: 'company_address', value: formData.company_address },
         { name: 'company_phone', value: formData.company_phone },
         { name: 'company_email', value: formData.company_email },
-        { name: 'default_currency', value: formData.default_currency },
-        { name: 'decimal_places', value: formData.decimal_places },
-        { name: 'date_format', value: formData.date_format },
-        { name: 'timezone', value: formData.timezone },
         { name: 'fiscal_year_start', value: formData.fiscal_year_start },
-        { name: 'fiscal_year_end', value: formData.fiscal_year_end },
-        { name: 'theme', value: formData.theme },
-        { name: 'language', value: formData.language },
-        { name: 'records_per_page', value: formData.records_per_page }
+        { name: 'fiscal_year_end', value: formData.fiscal_year_end }
     ];
     
     // Show loading

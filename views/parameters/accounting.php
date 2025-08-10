@@ -31,8 +31,8 @@
                                 <label for="default_currency" class="form-label">Default Currency</label>
                                 <select class="form-select" id="default_currency" name="default_currency">
                                     <option value="PHP" <?= getParameterValue($parameters, 'default_currency') === 'PHP' ? 'selected' : '' ?>>Philippine Peso (PHP)</option>
-                                    <option value="USD" <?= getParameterValue($parameters, 'default_currency') === 'USD' ? 'selected' : '' ?>>US Dollar (USD)</option>
-                                    <option value="EUR" <?= getParameterValue($parameters, 'default_currency') === 'EUR' ? 'selected' : '' ?>>Euro (EUR)</option>
+                                    <!-- <option value="USD" <?= getParameterValue($parameters, 'default_currency') === 'USD' ? 'selected' : '' ?>>US Dollar (USD)</option>
+                                    <option value="EUR" <?= getParameterValue($parameters, 'default_currency') === 'EUR' ? 'selected' : '' ?>>Euro (EUR)</option> -->
                                 </select>
                             </div>
                         </div>
