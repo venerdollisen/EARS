@@ -1,0 +1,168 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container-fluid">
+        <!-- Sidebar Toggle -->
+        <button class="btn btn-link sidebar-toggle d-lg-none">
+            <i class="bi bi-list"></i>
+        </button>
+        
+        <!-- Brand -->
+        <span class="navbar-brand d-none d-lg-block">
+            <?= APP_NAME ?>
+        </span>
+        
+        <!-- Right Side -->
+        <ul class="navbar-nav ms-auto">
+            <!-- Notifications -->
+            <li class="nav-item dropdown" id="notificationDropdown">
+                <a class="nav-link" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-bell"></i>
+                    <span class="badge bg-danger" id="notifCount" style="display:none;">0</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" style="min-width: 320px;" id="notifMenu">
+                    <li><h6 class="dropdown-header">Notifications</h6></li>
+                    <li><div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div></li>
+                </ul>
+            </li>
+            
+            <!-- User Profile -->
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle"></i>
+                    <?= htmlspecialchars($user['full_name'] ?? 'User') ?>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><h6 class="dropdown-header">User Menu</h6></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="<?= APP_URL ?>/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</nav> 
+<script>
+// Load notifications for current user
+document.addEventListener('DOMContentLoaded', function() {
+    fetch(APP_URL + '/api/notifications/recent')
+      .then(r => r.json())
+      .then(resp => {
+        if (!resp || !resp.success) return;
+        const items = resp.data || [];
+        const count = resp.unread ?? items.filter(i => i.is_read === '0' || i.is_read === 0).length;
+        const countEl = document.getElementById('notifCount');
+        const menu = document.getElementById('notifMenu');
+        const empty = document.getElementById('notifEmpty');
+        if (items.length > 0) {
+          empty && empty.remove();
+          items.forEach(n => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a class="dropdown-item" href="#" data-id="${n.id}">${n.title}<br><small class="text-muted">${n.message}</small></a>`;
+            menu.appendChild(li);
+          });
+          // Attach click handlers to open modal
+          menu.querySelectorAll('a.dropdown-item').forEach(a => {
+            a.addEventListener('click', (e) => {
+              e.preventDefault();
+              const id = a.getAttribute('data-id');
+              fetch(APP_URL + '/api/notifications/view/' + id, { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
+                .then(async r => {
+                  const text = await r.text();
+                  try { return JSON.parse(text); } catch (e) { console.error('Notif view parse error:', text); throw e; }
+                })
+                .then(resp => {
+                  if (!resp.success) return;
+                  showNotificationModal(resp.transaction);
+                });
+            });
+          });
+        }
+        if (count > 0) {
+          countEl.textContent = count;
+          countEl.style.display = '';
+        }
+      }).catch(() => {});
+});
+</script>
+<!-- Notification Modal -->
+<div class="modal fade" id="notifModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Transaction Review</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="notifTrnDetails" class="mb-3 small text-muted"></div>
+        <div class="mb-3">
+          <label class="form-label">Comment</label>
+          <textarea id="notifComment" class="form-control" rows="3" placeholder="Add a comment..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <!-- <button type="button" class="btn btn-primary" id="notifAddCommentBtn">Add Comment</button> -->
+        <button type="button" class="btn btn-success" id="notifApproveBtn">Approve</button>
+        <button type="button" class="btn btn-danger" id="notifRejectBtn">Reject</button>
+      </div>
+    </div>
+  </div>
+ </div>
+
+<script>
+let currentNotifTransactionId = null;
+function showNotificationModal(trn){
+  const details = document.getElementById('notifTrnDetails');
+  if (trn) {
+    currentNotifTransactionId = trn.id;
+    const amount = (trn.amount || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    details.innerHTML = `
+      <div><strong>Type:</strong> ${trn.transaction_type}</div>
+      <div><strong>Voucher:</strong> ${trn.reference_no}</div>
+      <div><strong>Date:</strong> ${new Date(trn.transaction_date).toLocaleDateString()}</div>
+      <div><strong>Payee:</strong> ${trn.payee_name || ''}</div>
+      <div><strong>Amount:</strong> ₱${amount}</div>
+      <hr class="my-2">
+      <div class="text-muted">Distribution follows header decision on approval/rejection.</div>
+    `;
+  } else {
+    details.textContent = 'No details available.';
+  }
+  const modal = new bootstrap.Modal(document.getElementById('notifModal'));
+  modal.show();
+}
+
+document.addEventListener('click', function(e){
+  if (e.target && e.target.id === 'notifAddCommentBtn') {
+    const c = document.getElementById('notifComment').value.trim();
+    if (!currentNotifTransactionId || !c) return;
+    fetch(APP_URL + '/api/notifications/comment', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transaction_id: currentNotifTransactionId, comment: c })
+    }).then(r => r.json()).then(resp => {
+      if (resp.success) { document.getElementById('notifComment').value = ''; }
+    });
+  }
+  if (e.target && e.target.id === 'notifApproveBtn') {
+    if (!currentNotifTransactionId) return;
+    fetch(APP_URL + '/api/transactions/' + currentNotifTransactionId + '/approve', { method: 'POST' })
+      .then(r => r.json()).then(resp => {
+        if (resp.success) {
+          bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
+        }
+      });
+  }
+  if (e.target && e.target.id === 'notifRejectBtn') {
+    if (!currentNotifTransactionId) return;
+    const reason = document.getElementById('notifComment').value.trim();
+    fetch(APP_URL + '/api/transactions/' + currentNotifTransactionId + '/reject', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason })
+    }).then(r => r.json()).then(resp => {
+      if (resp.success) {
+        bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
+      }
+    });
+  }
+});
+</script>
