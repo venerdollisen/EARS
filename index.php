@@ -146,6 +146,22 @@ $router->addRoute('/api/users/create', 'UserManagementController@store');
 $router->addRoute('/api/users/update/{id}', 'UserManagementController@update');
 $router->addRoute('/api/users/delete/{id}', 'UserManagementController@destroy');
 
+// Reports routes
+$router->addRoute('/reports', 'ReportsController@index');
+$router->addRoute('/reports/trial-balance', 'ReportsController@trialBalance');
+$router->addRoute('/reports/general-ledger', 'ReportsController@generalLedger');
+$router->addRoute('/reports/income-statement', 'ReportsController@incomeStatement');
+$router->addRoute('/reports/balance-sheet', 'ReportsController@balanceSheet');
+$router->addRoute('/api/reports/export-report', 'ReportsController@exportReport');
+
+// Journal Entries routes
+$router->addRoute('/journal-entries', 'JournalEntriesController@index');
+$router->addRoute('/journal-entries/create', 'JournalEntriesController@create');
+$router->addRoute('/journal-entries/view/{id}', 'JournalEntriesController@view');
+$router->addRoute('/api/journal-entries/save', 'JournalEntriesController@save');
+$router->addRoute('/api/journal-entries/{id}/approve', 'JournalEntriesController@approve');
+$router->addRoute('/api/journal-entries/{id}/reject', 'JournalEntriesController@reject');
+
 // Handle the request
 $router->dispatch();
 ?> 

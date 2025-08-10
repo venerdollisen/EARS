@@ -102,6 +102,12 @@
                         <span>Check Disbursement</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="<?=APP_URL?>/journal-entries" class="nav-link">
+                        <i class="bi bi-circle"></i>
+                        <span>Journal Entries</span>
+                    </a>
+                </li>
             </ul>
         </li>
 
@@ -118,6 +124,13 @@
             <a href="<?=APP_URL?>/summary" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/summary') !== false ? 'active' : '' ?>">
                 <i class="bi bi-graph-up"></i>
                 <span>Summary</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="<?=APP_URL?>/reports" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/reports') !== false ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>Reports</span>
             </a>
         </li>
 

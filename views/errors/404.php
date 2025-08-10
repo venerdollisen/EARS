@@ -14,37 +14,23 @@
 </head>
 <body class="bg-light">
     <div class="container">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-6 text-center">
-                <div class="card shadow-lg border-0">
-                    <div class="card-body p-5">
-                        <!-- 404 Icon -->
-                        <div class="mb-4">
-                            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 5rem;"></i>
-                        </div>
-                        
-                        <h1 class="display-1 text-muted">404</h1>
-                        <h2 class="h4 mb-3">Page Not Found</h2>
-                        <p class="text-muted mb-4">
-                            The page you're looking for doesn't exist or has been moved.
-                        </p>
-                        
-                        <div class="d-grid gap-2 d-md-block">
-                            <a href="/dashboard" class="btn btn-primary">
-                                <i class="bi bi-house me-2"></i>Go to Dashboard
-                            </a>
-                            <a href="javascript:history.back()" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-2"></i>Go Back
-                            </a>
-                        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
                     </div>
-                </div>
-                
-                <!-- Footer -->
-                <div class="text-center mt-4">
-                    <small class="text-muted">
-                        &copy; <?= date('Y') ?> <?= APP_NAME ?>. All rights reserved.
-                    </small>
+                    <h1 class="h3 text-muted mb-3">Page Not Found</h1>
+                    <p class="text-muted mb-4">The page you're looking for doesn't exist.</p>
+                    
+                    <div class="mt-4">
+                        <a href="<?= APP_URL ?>/dashboard" class="btn btn-primary me-2">
+                            <i class="bi bi-house me-2"></i>Go to Dashboard
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                            <i class="bi bi-arrow-left me-2"></i>Go Back
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
