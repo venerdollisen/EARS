@@ -655,7 +655,22 @@ function loadRecentTransactions(bustCache = false) {
                     }
                 }
                 const tbody = table.find('tbody');
-                tbody.html(html || `<tr><td colspan="7" class="text-center text-muted">No recent cash receipts</td></tr>`);
+                if (html) {
+                    tbody.html(html);
+                } else {
+                    // Create a proper row with 7 individual cells instead of colspan
+                    tbody.html(`
+                        <tr>
+                            <td class="text-center text-muted">No recent cash receipts</td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    `);
+                }
 
                 // Reinitialize DataTable to guarantee redraw and updated state
                 initializeTransactionsTable();
@@ -700,13 +715,23 @@ function initializeTransactionsTable() {
         }
     }
     
+    // Check if table has the correct number of columns
+    const headerCells = table.find('thead tr th').length;
+    const firstRowCells = table.find('tbody tr:first td').length;
+    
+    // If there's a mismatch, don't initialize DataTable
+    if (headerCells !== firstRowCells && firstRowCells > 0) {
+        console.warn('Column count mismatch: headers=' + headerCells + ', first row=' + firstRowCells);
+        return;
+    }
+    
     // Initialize DataTable
     transactionsTable = $('#transactionsTable').DataTable({
         pageLength: 10,
         order: [[0, 'desc']], // Sort by date descending
         columnDefs: [
-            { targets: 3, type: 'num-fmt', className: 'text-end' },
-            { targets: -1, orderable: false, searchable: false }
+            { targets: 3, type: 'num-fmt', className: 'text-end' }, // Total Amount column
+            { targets: 6, orderable: false, searchable: false } // Action column (index 6)
         ],
         language: {
             search: "Search:",

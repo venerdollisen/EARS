@@ -7,7 +7,7 @@ MODIFY COLUMN transaction_type ENUM('cash_receipt', 'cash_disbursement', 'check_
 
 -- Update STATUS enum to include journal entry statuses
 ALTER TABLE transactions 
-MODIFY COLUMN STATUS ENUM('draft', 'posted', 'cancelled', 'approved', 'pending', 'rejected') DEFAULT 'posted';
+MODIFY COLUMN status ENUM('draft', 'posted', 'cancelled', 'approved', 'pending', 'rejected') DEFAULT 'posted';
 
 -- Update existing transactions to have proper status
-UPDATE transactions SET STATUS = 'posted' WHERE STATUS IS NULL; 
+UPDATE transactions SET status = 'posted' WHERE STATUS IS NULL; 
