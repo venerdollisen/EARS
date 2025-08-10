@@ -282,6 +282,11 @@ function calculateTotals(){
         const c = parseFloat(r.querySelector('.credit-amount')?.value || 0) || 0;
         totalDebit += d; totalCredit += c;
     });
+    
+    // Fix floating point precision issues by rounding to 2 decimal places
+    totalDebit = Math.round(totalDebit * 100) / 100;
+    totalCredit = Math.round(totalCredit * 100) / 100;
+    
     document.getElementById('totalDebit').textContent = '₱' + totalDebit.toLocaleString('en-PH', { minimumFractionDigits: 2 });
     document.getElementById('totalCredit').textContent = '₱' + totalCredit.toLocaleString('en-PH', { minimumFractionDigits: 2 });
     const diff = Math.abs(totalDebit - totalCredit);
@@ -307,7 +312,11 @@ function saveTransaction(){
         totalD+=d; totalC+=c;
     });
     if (!hasLine){ EARS.showAlert('Please add at least one account line with amounts', 'danger'); return; }
-    if (Math.abs(totalD-totalC) >= 0.01){ EARS.showAlert('Transaction is not balanced.', 'warning'); return; }
+    
+    // Fix floating point precision issues
+    const roundedTotalD = Math.round(totalD * 100) / 100;
+    const roundedTotalC = Math.round(totalC * 100) / 100;
+    if (Math.abs(roundedTotalD-roundedTotalC) >= 0.01){ EARS.showAlert('Transaction is not balanced.', 'warning'); return; }
 
     const btn = document.querySelector('button[onclick="saveTransaction()"]');
     const btnTxt = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';

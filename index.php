@@ -134,6 +134,7 @@ $router->addRoute('/api/settings/test-sms', 'SettingsController@testSMS');
 
 // Notifications API routes
 $router->addRoute('/api/notifications/recent', 'NotificationController@recent');
+$router->addRoute('/api/notifications/count', 'NotificationController@count');
 $router->addRoute('/api/notifications/view/{id}', 'NotificationController@view');
 $router->addRoute('/api/notifications/comment', 'NotificationController@comment');
 

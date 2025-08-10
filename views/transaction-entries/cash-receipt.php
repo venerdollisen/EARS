@@ -382,6 +382,10 @@ function updateTotals() {
         totalCredit += parseFloat($(this).val()) || 0;
     });
     
+    // Fix floating point precision issues by rounding to 2 decimal places
+    totalDebit = Math.round(totalDebit * 100) / 100;
+    totalCredit = Math.round(totalCredit * 100) / 100;
+    
     $('#totalDebit').text('₱' + totalDebit.toLocaleString('en-PH', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
@@ -434,7 +438,11 @@ function updateSummary() {
 function checkBalance() {
     const totalDebit = parseFloat($('#totalDebit').text().replace('₱', '').replace(',', '')) || 0;
     const totalCredit = parseFloat($('#totalCredit').text().replace('₱', '').replace(',', '')) || 0;
-    const difference = Math.abs(totalDebit - totalCredit);
+    
+    // Fix floating point precision issues
+    const roundedDebit = Math.round(totalDebit * 100) / 100;
+    const roundedCredit = Math.round(totalCredit * 100) / 100;
+    const difference = Math.abs(roundedDebit - roundedCredit);
     
     if (difference < 0.01) {
         EARS.showAlert('✅ Transaction is balanced!', 'success', '#globalAlertContainer');
@@ -457,7 +465,11 @@ function saveTransaction() {
     // Check if transaction is balanced
     const totalDebit = parseFloat($('#totalDebit').text().replace('₱', '').replace(',', '')) || 0;
     const totalCredit = parseFloat($('#totalCredit').text().replace('₱', '').replace(',', '')) || 0;
-    const difference = Math.abs(totalDebit - totalCredit);
+    
+    // Fix floating point precision issues
+    const roundedDebit = Math.round(totalDebit * 100) / 100;
+    const roundedCredit = Math.round(totalCredit * 100) / 100;
+    const difference = Math.abs(roundedDebit - roundedCredit);
     
     if (difference >= 0.01) {
         EARS.showAlert('Transaction must be balanced before saving. Difference: ₱' + difference.toLocaleString('en-PH', {

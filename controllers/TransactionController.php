@@ -325,8 +325,8 @@ class TransactionController extends Controller {
                     $notifModel->deleteByTransaction((int)$id, $ref ?: null);
                 } catch (Exception $e) { error_log('Delete notif on reject failed: ' . $e->getMessage()); }
             }
-            if ($ok && $reason) {
-                // save return_reason on header
+            if ($ok) {
+                // save return_reason on header (even if empty to clear previous reason)
                 $stmt = $this->db->prepare("UPDATE transactions SET return_reason = ?, updated_at = NOW() WHERE id = ? AND parent_transaction_id IS NULL");
                 $stmt->execute([$reason, (int)$id]);
             }

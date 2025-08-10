@@ -458,6 +458,10 @@ function calculateTotals() {
         totalCredit += credit;
     });
 
+    // Fix floating point precision issues by rounding to 2 decimal places
+    totalDebit = Math.round(totalDebit * 100) / 100;
+    totalCredit = Math.round(totalCredit * 100) / 100;
+
     // Update totals
     document.getElementById('totalDebit').textContent = '₱' + totalDebit.toLocaleString('en-PH', { minimumFractionDigits: 2 });
     document.getElementById('totalCredit').textContent = '₱' + totalCredit.toLocaleString('en-PH', { minimumFractionDigits: 2 });
@@ -480,7 +484,12 @@ function checkBalance() {
     calculateTotals();
     const totalDebit = parseFloat((document.getElementById('totalDebit').textContent || '0').replace(/[^0-9.]/g, '')) || 0;
     const totalCredit = parseFloat((document.getElementById('totalCredit').textContent || '0').replace(/[^0-9.]/g, '')) || 0;
-    const difference = Math.abs(totalDebit - totalCredit);
+    
+    // Fix floating point precision issues
+    const roundedDebit = Math.round(totalDebit * 100) / 100;
+    const roundedCredit = Math.round(totalCredit * 100) / 100;
+    const difference = Math.abs(roundedDebit - roundedCredit);
+    
     if (difference < 0.01) {
         EARS.showAlert('✅ Transaction is balanced!', 'success', '#globalAlertContainer');
     } else {
@@ -519,7 +528,11 @@ function saveTransaction() {
     const totalDebit = parseFloat(document.getElementById('totalDebit').textContent.replace('₱', '')) || 0;
     const totalCredit = parseFloat(document.getElementById('totalCredit').textContent.replace('₱', '')) || 0;
     
-    if (totalDebit !== totalCredit) {
+    // Fix floating point precision issues
+    const roundedDebit = Math.round(totalDebit * 100) / 100;
+    const roundedCredit = Math.round(totalCredit * 100) / 100;
+    
+    if (Math.abs(roundedDebit - roundedCredit) >= 0.01) {
         EARS.showAlert('Transaction is not balanced. Please check your entries.', 'warning');
         return;
     }

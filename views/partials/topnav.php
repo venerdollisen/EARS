@@ -95,8 +95,8 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="modal-body">
         <div id="notifTrnDetails" class="mb-3 small text-muted"></div>
         <div class="mb-3">
-          <label class="form-label">Comment</label>
-          <textarea id="notifComment" class="form-control" rows="3" placeholder="Add a comment..."></textarea>
+          <label class="form-label">Comment <span class="text-muted">(Required for rejection)</span></label>
+          <textarea id="notifComment" class="form-control" rows="3" placeholder="Add a comment... (Required when rejecting)"></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -111,6 +111,79 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 let currentNotifTransactionId = null;
+
+// Function to reload notification count
+function reloadNotificationCount() {
+  fetch(APP_URL + '/api/notifications/count')
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp || !resp.success) return;
+      const count = resp.unread || 0;
+      const countEl = document.getElementById('notifCount');
+      if (count > 0) {
+        countEl.textContent = count;
+        countEl.style.display = '';
+      } else {
+        countEl.style.display = 'none';
+      }
+    }).catch(() => {});
+}
+
+// Function to reload notification list
+function reloadNotificationList() {
+  fetch(APP_URL + '/api/notifications/recent')
+    .then(r => r.json())
+    .then(resp => {
+      if (!resp || !resp.success) return;
+      const items = resp.data || [];
+      const menu = document.getElementById('notifMenu');
+      const empty = document.getElementById('notifEmpty');
+      
+      // Clear existing notifications
+      const existingItems = menu.querySelectorAll('li:not(:first-child)');
+      existingItems.forEach(item => item.remove());
+      
+      // Add empty message if no notifications
+      if (items.length === 0) {
+        if (!empty) {
+          const emptyDiv = document.createElement('li');
+          emptyDiv.innerHTML = '<div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div>';
+          menu.appendChild(emptyDiv);
+        }
+        return;
+      }
+      
+      // Remove empty message if exists
+      if (empty) {
+        empty.remove();
+      }
+      
+      // Add new notifications
+      items.forEach(n => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a class="dropdown-item" href="#" data-id="${n.id}">${n.title}<br><small class="text-muted">${n.message}</small></a>`;
+        menu.appendChild(li);
+      });
+      
+      // Re-attach click handlers to new notification items
+      menu.querySelectorAll('a.dropdown-item').forEach(a => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = a.getAttribute('data-id');
+          fetch(APP_URL + '/api/notifications/view/' + id, { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
+            .then(async r => {
+              const text = await r.text();
+              try { return JSON.parse(text); } catch (e) { console.error('Notif view parse error:', text); throw e; }
+            })
+            .then(resp => {
+              if (!resp.success) return;
+              showNotificationModal(resp.transaction);
+            });
+        });
+      });
+    }).catch(() => {});
+}
+
 function showNotificationModal(trn){
   const details = document.getElementById('notifTrnDetails');
   if (trn) {
@@ -145,22 +218,80 @@ document.addEventListener('click', function(e){
   }
   if (e.target && e.target.id === 'notifApproveBtn') {
     if (!currentNotifTransactionId) return;
+    
+    // Show confirmation dialog
+    if (!confirm('Do you want to approve this transaction?')) {
+      return;
+    }
+    
     fetch(APP_URL + '/api/transactions/' + currentNotifTransactionId + '/approve', { method: 'POST' })
       .then(r => r.json()).then(resp => {
         if (resp.success) {
           bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
+          // Show success message
+          if (window.EARS && window.EARS.showAlert) {
+            window.EARS.showAlert('Transaction approved successfully!', 'success');
+          }
+          // Reload notification count and list after a short delay
+          setTimeout(() => {
+            reloadNotificationCount();
+            reloadNotificationList();
+          }, 500);
+        } else {
+          // Show error message
+          if (window.EARS && window.EARS.showAlert) {
+            window.EARS.showAlert('Failed to approve transaction: ' + (resp.message || 'Unknown error'), 'danger');
+          }
+        }
+      }).catch(error => {
+        // Show error message
+        if (window.EARS && window.EARS.showAlert) {
+          window.EARS.showAlert('Failed to approve transaction: ' + error.message, 'danger');
         }
       });
   }
   if (e.target && e.target.id === 'notifRejectBtn') {
     if (!currentNotifTransactionId) return;
     const reason = document.getElementById('notifComment').value.trim();
+    
+    // Validate that a reason is provided for rejection
+    if (!reason) {
+      if (window.EARS && window.EARS.showAlert) {
+        window.EARS.showAlert('Please provide a reason for rejection.', 'warning');
+      }
+      return;
+    }
+    
+    // Show confirmation dialog
+    if (!confirm('Do you want to reject this transaction?')) {
+      return;
+    }
+    
     fetch(APP_URL + '/api/transactions/' + currentNotifTransactionId + '/reject', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason })
     }).then(r => r.json()).then(resp => {
       if (resp.success) {
         bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
+        // Show success message
+        if (window.EARS && window.EARS.showAlert) {
+          window.EARS.showAlert('Transaction rejected successfully!', 'success');
+        }
+        // Reload notification count and list after a short delay
+        setTimeout(() => {
+          reloadNotificationCount();
+          reloadNotificationList();
+        }, 500);
+      } else {
+        // Show error message
+        if (window.EARS && window.EARS.showAlert) {
+          window.EARS.showAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
+        }
+      }
+    }).catch(error => {
+      // Show error message
+      if (window.EARS && window.EARS.showAlert) {
+        window.EARS.showAlert('Failed to reject transaction: ' + error.message, 'danger');
       }
     });
   }
