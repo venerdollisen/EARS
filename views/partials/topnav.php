@@ -32,8 +32,8 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><h6 class="dropdown-header">User Menu</h6></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                    <li><a class="dropdown-item" href="<?= APP_URL ?>/settings/profile"><i class="bi bi-person"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="<?= APP_URL ?>/settings/general"><i class="bi bi-gear"></i> Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="<?= APP_URL ?>/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
                 </ul>

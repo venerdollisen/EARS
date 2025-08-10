@@ -75,11 +75,16 @@ CREATE TABLE suppliers (
     phone VARCHAR(20),
     email VARCHAR(100),
     address TEXT,
+    vat_subject ENUM('VAT', 'Non-VAT', 'Zero-Rated') DEFAULT 'VAT',
+    tin VARCHAR(20),
+    vat_rate DECIMAL(5,2) DEFAULT 12.00,
+    vat_account_id INT,
     account_id INT,
     status ENUM('active', 'inactive') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id)
+    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id),
+    FOREIGN KEY (vat_account_id) REFERENCES chart_of_accounts(id)
 );
 
 -- Projects table
@@ -237,12 +242,15 @@ INSERT INTO chart_of_accounts (account_code, account_name, account_type_id, grou
 ('3000', "Owner's Equity", 3, 3, "Owner's investment and retained earnings"),
 ('4000', 'Sales Revenue', 4, 4, 'Revenue from sales of goods/services'),
 ('5000', 'Cost of Goods Sold', 5, 5, 'Direct costs of producing goods'),
-('6000', 'Operating Expenses', 5, 5, 'General and administrative expenses');
+('6000', 'Operating Expenses', 5, 5, 'General and administrative expenses'),
+('2100', 'Input VAT', 2, 2, 'VAT paid on purchases'),
+('2200', 'Output VAT', 2, 2, 'VAT collected on sales'),
+('2300', 'VAT Payable', 2, 2, 'VAT payable to BIR');
 
 -- Default suppliers
-INSERT INTO suppliers (supplier_name, contact_person, phone, email, address, account_id) VALUES
-('ABC Supplies Co.', 'John Smith', '+63 912 345 6789', 'john@abcsupplies.com', '123 Main St., Manila', 4),
-('XYZ Corporation', 'Jane Doe', '+63 987 654 3210', 'jane@xyzcorp.com', '456 Business Ave., Quezon City', 4);
+INSERT INTO suppliers (supplier_name, contact_person, phone, email, address, vat_subject, tin, vat_rate, vat_account_id, account_id) VALUES
+('ABC Supplies Co.', 'John Smith', '+63 912 345 6789', 'john@abcsupplies.com', '123 Main St., Manila', 'VAT', '123-456-789-000', 12.00, 9, 4),
+('XYZ Corporation', 'Jane Doe', '+63 987 654 3210', 'jane@xyzcorp.com', '456 Business Ave., Quezon City', 'Non-VAT', '987-654-321-000', 0.00, NULL, 4);
 
 -- Default projects
 INSERT INTO projects (project_code, project_name, description, start_date, end_date, budget, manager, status) VALUES
@@ -298,7 +306,12 @@ FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
 
 ALTER TABLE transactions 
 ADD CONSTRAINT fk_transactions_department 
-FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL; 
+FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL;
+
+-- Add VAT subject and TIN columns to suppliers table
+ALTER TABLE suppliers 
+ADD COLUMN vat_subject ENUM('VAT', 'Non-VAT', 'Zero-Rated') DEFAULT 'VAT' AFTER address,
+ADD COLUMN tin VARCHAR(20) NULL AFTER vat_subject; 
 
 -- Seed sample cash receipt data (1000 headers with 2-5 distribution lines each)
 DELIMITER $$

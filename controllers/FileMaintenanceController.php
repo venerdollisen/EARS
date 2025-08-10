@@ -208,6 +208,10 @@ class FileMaintenanceController extends Controller {
                 'phone' => $data['phone'],
                 'email' => $data['email'],
                 'address' => $data['address'],
+                'vat_subject' => $data['vat_subject'] ?? 'VAT',
+                'tin' => $data['tin'] ?? null,
+                'vat_rate' => $data['vat_rate'] ?? 12.00,
+                'vat_account_id' => $data['vat_account_id'] ?? null,
                 'account_id' => $data['account_id']
             ]);
         } else {
@@ -217,6 +221,10 @@ class FileMaintenanceController extends Controller {
                 'phone' => $data['phone'],
                 'email' => $data['email'],
                 'address' => $data['address'],
+                'vat_subject' => $data['vat_subject'] ?? 'VAT',
+                'tin' => $data['tin'] ?? null,
+                'vat_rate' => $data['vat_rate'] ?? 12.00,
+                'vat_account_id' => $data['vat_account_id'] ?? null,
                 'account_id' => $data['account_id']
             ]);
         }

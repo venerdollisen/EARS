@@ -329,8 +329,12 @@ function updateChartData() {
     fetch(API_BASE + '/api/dashboard/account-balance', { cache: 'no-store' })
         .then(response => response.json())
         .then(data => {
+            console.log('Account balance API response:', data);
             if (data.success) {
+                console.log('Account balance data:', data.data);
                 updateAccountBalanceChart(data.data);
+            } else {
+                console.error('Account balance API error:', data.message);
             }
         })
         .catch(error => console.error('Error loading account balance:', error));
@@ -389,6 +393,8 @@ function updateTransactionTypeChart(data) {
 }
 
 function updateAccountBalanceChart(data) {
+    console.log('updateAccountBalanceChart called with data:', data);
+    
     const labels = [];
     const balances = [];
 
@@ -397,9 +403,14 @@ function updateAccountBalanceChart(data) {
         balances.push(parseFloat(item.current_balance));
     });
 
+    console.log('Chart labels:', labels);
+    console.log('Chart balances:', balances);
+
     accountBalanceChart.data.labels = labels;
     accountBalanceChart.data.datasets[0].data = balances;
     accountBalanceChart.update();
+    
+    console.log('Chart updated');
 }
 
 function loadRecentTransactions() {

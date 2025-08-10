@@ -45,10 +45,16 @@ class SummaryController extends Controller {
         $this->requireAuth();
         try {
             [$dateFrom, $dateTo] = $this->resolveDateRange();
+            $cashDisbursementTotal = $this->sumAmount('cash_disbursement', $dateFrom, $dateTo);
+            $checkDisbursementTotal = $this->sumAmount('check_disbursement', $dateFrom, $dateTo);
+            $totalReceipts = $this->sumAmount('cash_receipt', $dateFrom, $dateTo);
+            
             $overview = [
-                'total_receipts' => $this->sumAmount('cash_receipt', $dateFrom, $dateTo),
-                'total_disbursements' => $this->sumAmount('cash_disbursement', $dateFrom, $dateTo) + $this->sumAmount('check_disbursement', $dateFrom, $dateTo),
-                'net_cash_flow' => $this->sumAmount('cash_receipt', $dateFrom, $dateTo) - ($this->sumAmount('cash_disbursement', $dateFrom, $dateTo) + $this->sumAmount('check_disbursement', $dateFrom, $dateTo)),
+                'total_receipts' => $totalReceipts,
+                'cash_disbursement_total' => $cashDisbursementTotal,
+                'check_disbursement_total' => $checkDisbursementTotal,
+                'total_disbursements' => $cashDisbursementTotal + $checkDisbursementTotal,
+                'net_cash_flow' => $totalReceipts - ($cashDisbursementTotal + $checkDisbursementTotal),
                 'total_transactions' => $this->countHeaders(null, $dateFrom, $dateTo)
             ];
             $this->jsonResponse(['success' => true, 'data' => $overview]);
@@ -165,9 +171,23 @@ class SummaryController extends Controller {
      * Get transaction amount by type
      */
     private function getTransactionAmount($type) {
-        $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE transaction_type = ? AND parent_transaction_id IS NULL";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$type]);
+        // Handle both old and new transaction types for disbursements
+        if ($type === 'cash_disbursement') {
+            $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE (transaction_type = 'cash_disbursement' OR (transaction_type = 'disbursement' AND payment_form = 'cash')) AND parent_transaction_id IS NULL";
+        } elseif ($type === 'check_disbursement') {
+            $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE (transaction_type = 'check_disbursement' OR (transaction_type = 'disbursement' AND payment_form = 'check')) AND parent_transaction_id IS NULL";
+        } else {
+            $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE transaction_type = ? AND parent_transaction_id IS NULL";
+        }
+        
+        if ($type === 'cash_disbursement' || $type === 'check_disbursement') {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+        } else {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$type]);
+        }
+        
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;
     }
@@ -217,23 +237,35 @@ class SummaryController extends Controller {
         $dateFrom = $_GET['date_from'] ?? null;
         $dateTo = $_GET['date_to'] ?? null;
         if (!$dateFrom || !$dateTo) {
-            // Default to fiscal year if set; otherwise current year
-            $fy = $this->db->query("SELECT 
-                    MAX(CASE WHEN parameter_name='fiscal_year_start' THEN parameter_value END) AS fy_start,
-                    MAX(CASE WHEN parameter_name='fiscal_year_end' THEN parameter_value END) AS fy_end
-                FROM accounting_parameters")->fetch(PDO::FETCH_ASSOC);
-            $dateFrom = $fy['fy_start'] ?: date('Y-01-01');
-            $dateTo = $fy['fy_end'] ?: date('Y-12-31');
+            // Default to current year
+            $dateFrom = date('Y-01-01');
+            $dateTo = date('Y-12-31');
         }
         return [$dateFrom, $dateTo];
     }
 
     private function sumAmount(?string $type, string $dateFrom, string $dateTo): float {
-        $sql = "SELECT COALESCE(SUM(amount),0) AS total FROM transactions
-                WHERE parent_transaction_id IS NULL
-                AND transaction_date BETWEEN ? AND ?";
-        $params = [$dateFrom, $dateTo];
-        if ($type) { $sql .= " AND transaction_type = ?"; $params[] = $type; }
+        // Handle both old and new transaction types for disbursements
+        if ($type === 'cash_disbursement') {
+            $sql = "SELECT COALESCE(SUM(amount),0) AS total FROM transactions
+                    WHERE parent_transaction_id IS NULL
+                    AND transaction_date BETWEEN ? AND ?
+                    AND (transaction_type = 'cash_disbursement' OR (transaction_type = 'disbursement' AND payment_form = 'cash'))";
+            $params = [$dateFrom, $dateTo];
+        } elseif ($type === 'check_disbursement') {
+            $sql = "SELECT COALESCE(SUM(amount),0) AS total FROM transactions
+                    WHERE parent_transaction_id IS NULL
+                    AND transaction_date BETWEEN ? AND ?
+                    AND (transaction_type = 'check_disbursement' OR (transaction_type = 'disbursement' AND payment_form = 'check'))";
+            $params = [$dateFrom, $dateTo];
+        } else {
+            $sql = "SELECT COALESCE(SUM(amount),0) AS total FROM transactions
+                    WHERE parent_transaction_id IS NULL
+                    AND transaction_date BETWEEN ? AND ?";
+            $params = [$dateFrom, $dateTo];
+            if ($type) { $sql .= " AND transaction_type = ?"; $params[] = $type; }
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return (float)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
@@ -298,16 +330,10 @@ class SummaryController extends Controller {
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            echo json_encode([
-                'success' => true,
-                'data' => $data
-            ]);
+            $this->jsonResponse(['success' => true, 'data' => $data]);
             
         } catch (Exception $e) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Failed to get monthly data: ' . $e->getMessage()
-            ]);
+            $this->jsonResponse(['success' => false, 'message' => 'Failed to get monthly data: ' . $e->getMessage()], 500);
         }
     }
     
@@ -335,16 +361,10 @@ class SummaryController extends Controller {
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            echo json_encode([
-                'success' => true,
-                'data' => $data
-            ]);
+            $this->jsonResponse(['success' => true, 'data' => $data]);
             
         } catch (Exception $e) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Failed to get account balance: ' . $e->getMessage()
-            ]);
+            $this->jsonResponse(['success' => false, 'message' => 'Failed to get account balance: ' . $e->getMessage()], 500);
         }
     }
 } 

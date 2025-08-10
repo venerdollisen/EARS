@@ -21,9 +21,8 @@
                         <thead>
                             <tr>
                                 <th>Supplier Name</th>
-                                <th>Contact Person</th>
-                                <th>Phone</th>
-                                <th>Email</th>
+                                <th>Contact Info</th>
+                                <th>VAT Details</th>
                                 <th>Account</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -32,18 +31,41 @@
                         <tbody>
                             <?php foreach ($suppliers as $supplier): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars((string)$supplier['supplier_name']) ?></td>
-                                    <td><?= htmlspecialchars((string)$supplier['contact_person']) ?></td>
-                                    <td><?= htmlspecialchars((string)$supplier['phone']) ?></td>
-                                    <td><?= htmlspecialchars((string)$supplier['email']) ?></td>
                                     <td>
-                                        <?php 
-                                        if ($supplier['account_code'] && $supplier['account_name']) {
-                                            echo htmlspecialchars((string)$supplier['account_code'] . ' - ' . (string)$supplier['account_name']);
-                                        } else {
-                                            echo '<span class="text-muted">No account linked</span>';
-                                        }
-                                        ?>
+                                        <strong><?= htmlspecialchars((string)$supplier['supplier_name']) ?></strong>
+                                        <?php if ($supplier['tin']): ?>
+                                            <br><small class="text-muted">TIN: <?= htmlspecialchars((string)$supplier['tin']) ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($supplier['contact_person']): ?>
+                                            <div><i class="bi bi-person me-1"></i><?= htmlspecialchars((string)$supplier['contact_person']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($supplier['phone']): ?>
+                                            <div><i class="bi bi-telephone me-1"></i><?= htmlspecialchars((string)$supplier['phone']) ?></div>
+                                        <?php endif; ?>
+                                        <?php if ($supplier['email']): ?>
+                                            <div><i class="bi bi-envelope me-1"></i><?= htmlspecialchars((string)$supplier['email']) ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?= $supplier['vat_subject'] === 'VAT' ? 'primary' : ($supplier['vat_subject'] === 'Non-VAT' ? 'warning' : 'info') ?>">
+                                            <?= htmlspecialchars((string)$supplier['vat_subject']) ?>
+                                        </span>
+                                        <?php if ($supplier['vat_rate'] && $supplier['vat_rate'] > 0): ?>
+                                            <br><small class="text-muted">Rate: <?= number_format($supplier['vat_rate'], 0) ?>%</small>
+                                        <?php endif; ?>
+                                        <?php if ($supplier['vat_account_code']): ?>
+                                            <br><small class="text-muted">VAT: <?= htmlspecialchars((string)$supplier['vat_account_code']) ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($supplier['account_code'] && $supplier['account_name']): ?>
+                                            <div><strong><?= htmlspecialchars((string)$supplier['account_code']) ?></strong></div>
+                                            <small class="text-muted"><?= htmlspecialchars((string)$supplier['account_name']) ?></small>
+                                        <?php else: ?>
+                                            <span class="text-muted">No account linked</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <span class="badge bg-<?= $supplier['status'] === 'active' ? 'success' : 'secondary' ?>">
@@ -84,51 +106,112 @@
                     <input type="hidden" id="action" name="action" value="create">
                     <input type="hidden" name="table" value="suppliers">
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="supplier_name" class="form-label">Supplier Name *</label>
-                                <input type="text" class="form-control" id="supplier_name" name="supplier_name" required>
-                            </div>
+                    <!-- Basic Information Section -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h6>
                         </div>
-                        <div class="col-md-6">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="supplier_name" class="form-label">Supplier Name *</label>
+                                        <input type="text" class="form-control" id="supplier_name" name="supplier_name" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="contact_person" class="form-label">Contact Person</label>
+                                        <input type="text" class="form-control" id="contact_person" name="contact_person">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="phone" class="form-label">Phone</label>
+                                        <input type="tel" class="form-control" id="phone" name="phone">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" name="email">
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mb-3">
-                                <label for="contact_person" class="form-label">Contact Person</label>
-                                <input type="text" class="form-control" id="contact_person" name="contact_person">
+                                <label for="address" class="form-label">Address</label>
+                                <textarea class="form-control" id="address" name="address" rows="2"></textarea>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="phone" class="form-label">Phone</label>
-                                <input type="tel" class="form-control" id="phone" name="phone">
-                            </div>
+                    <!-- VAT Information Section -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>VAT Information</h6>
                         </div>
-                        <div class="col-md-6">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="vat_subject" class="form-label">VAT Subject</label>
+                                        <select class="form-select" id="vat_subject" name="vat_subject">
+                                            <option value="VAT">VAT</option>
+                                            <option value="Non-VAT">Non-VAT</option>
+                                            <option value="Zero-Rated">Zero-Rated</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="vat_rate" class="form-label">VAT Rate (%)</label>
+                                        <input type="number" class="form-control" id="vat_rate" name="vat_rate" step="0.01" min="0" max="100" value="12.00" placeholder="12.00">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="tin" class="form-label">TIN</label>
+                                        <input type="text" class="form-control" id="tin" name="tin" placeholder="123-456-789-000">
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" name="email">
+                                <label for="vat_account_id" class="form-label">VAT Account</label>
+                                <select class="form-select" id="vat_account_id" name="vat_account_id">
+                                    <option value="">Select VAT Account</option>
+                                    <?php foreach ($accounts as $account): ?>
+                                        <option value="<?= $account['id'] ?>">
+                                            <?= htmlspecialchars((string)$account['account_code'] . ' - ' . (string)$account['account_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="address" class="form-label">Address</label>
-                        <textarea class="form-control" id="address" name="address" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="account_id" class="form-label">Linked Account *</label>
-                        <select class="form-select" id="account_id" name="account_id" required>
-                            <option value="">Select Account</option>
-                            <?php foreach ($accounts as $account): ?>
-                                <option value="<?= $account['id'] ?>">
-                                    <?= htmlspecialchars((string)$account['account_code'] . ' - ' . (string)$account['account_name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <!-- Account Linking Section -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Account Linking</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="account_id" class="form-label">Linked Account *</label>
+                                <select class="form-select" id="account_id" name="account_id" required>
+                                    <option value="">Select Account</option>
+                                    <?php foreach ($accounts as $account): ?>
+                                        <option value="<?= $account['id'] ?>">
+                                            <?= htmlspecialchars((string)$account['account_code'] . ' - ' . (string)$account['account_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -162,6 +245,10 @@ function editSupplier(supplier) {
     $('#phone').val(supplier.phone);
     $('#email').val(supplier.email);
     $('#address').val(supplier.address);
+    $('#vat_subject').val(supplier.vat_subject);
+    $('#tin').val(supplier.tin);
+    $('#vat_rate').val(supplier.vat_rate);
+    $('#vat_account_id').val(supplier.vat_account_id);
     $('#account_id').val(supplier.account_id);
     
     $('#supplierModal').modal('show');

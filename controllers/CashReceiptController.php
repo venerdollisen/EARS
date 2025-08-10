@@ -34,8 +34,8 @@ class CashReceiptController extends Controller {
         // Get accounts for dropdown (including inactive ones for now)
         $accounts = $this->chartOfAccountsModel->getAllAccountsIncludingInactive();
         
-        // Debug: Log the accounts being loaded
-        error_log('Accounts loaded for cash receipt form: ' . json_encode($accounts));
+        // Debug: Log the accounts being loaded (commented out to prevent output issues)
+        // error_log('Accounts loaded for cash receipt form: ' . json_encode($accounts));
         
         // Get suppliers for subsidiary accounts
         $suppliers = $this->supplierModel->getAllSuppliers();
@@ -65,11 +65,13 @@ class CashReceiptController extends Controller {
         
         try {
             $data = json_decode(file_get_contents('php://input'), true);
-            // Debug: Log the received data
-            error_log('Cash receipt save data received: ' . json_encode($data));
+            // var_dump($data);
+            // die();
+            // Debug: Log the received data (commented out to prevent output issues)
+            // error_log('Cash receipt save data received: ' . json_encode($data));
             
-            // Validate required fields (amount will be computed; payment fields optional)
-            $requiredFields = ['reference_no', 'transaction_date'];
+            // Validate required fields
+            $requiredFields = ['reference_no', 'transaction_date', 'amount', 'payment_form', 'payment_description'];
             $missingFields = [];
             
             foreach ($requiredFields as $field) {
@@ -81,8 +83,7 @@ class CashReceiptController extends Controller {
             if (!empty($missingFields)) {
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Missing required fields: ' . implode(', ', $missingFields),
-                    'error' => 'Missing required fields: ' . implode(', ', $missingFields)
+                    'message' => 'Missing required fields: ' . implode(', ', $missingFields)
                 ]);
                 return;
             }
@@ -91,8 +92,7 @@ class CashReceiptController extends Controller {
             if (empty($data['account_distribution']) || !is_array($data['account_distribution'])) {
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Account distribution is required',
-                    'error' => 'Account distribution is required'
+                    'message' => 'Account distribution is required'
                 ]);
                 return;
             }
@@ -111,11 +111,9 @@ class CashReceiptController extends Controller {
             }
             
             if (abs($totalDebit - $totalCredit) > 0.01) {
-                $msg = 'Total debit (₱' . number_format($totalDebit, 2) . ') must equal total credit (₱' . number_format($totalCredit, 2) . ')';
                 echo json_encode([
                     'success' => false,
-                    'message' => $msg,
-                    'error' => $msg
+                    'message' => 'Total debit (₱' . number_format($totalDebit, 2) . ') must equal total credit (₱' . number_format($totalCredit, 2) . ')'
                 ]);
                 return;
             }
@@ -124,11 +122,10 @@ class CashReceiptController extends Controller {
             $transactionData = [
                 'reference_no' => $data['reference_no'],
                 'transaction_date' => $data['transaction_date'],
-                // Always set amount from computed totals for consistency
-                'amount' => $totalDebit,
+                'amount' => $data['amount'],
                 'transaction_type' => 'cash_receipt',
-                'payment_form' => !empty($data['payment_form']) ? $data['payment_form'] : 'cash',
-                'description' => $data['payment_description'] ?? ($data['payment_for'] ?? ''),
+                'payment_form' => $data['payment_form'],
+                'description' => $data['payment_description'],
                 'check_number' => $data['check_number'] ?? null,
                 'bank' => $data['bank'] ?? null,
                 'billing_number' => $data['billing_number'] ?? null,
@@ -153,17 +150,14 @@ class CashReceiptController extends Controller {
             } else {
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Failed to save cash receipt: ' . $result['message'],
-                    'error' => 'Failed to save cash receipt: ' . $result['message']
+                    'message' => 'Failed to save cash receipt: ' . $result['message']
                 ]);
             }
             
         } catch (Exception $e) {
-            $msg = 'Failed to save cash receipt: ' . $e->getMessage();
             echo json_encode([
                 'success' => false,
-                'message' => $msg,
-                'error' => $msg
+                'message' => 'Failed to save cash receipt: ' . $e->getMessage()
             ]);
         }
     }
@@ -251,6 +245,14 @@ class CashReceiptController extends Controller {
      * Get recent cash receipts for AJAX
      */
     public function recent() {
+        // Clear any output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Set proper headers
+        header('Content-Type: application/json');
+        
         $this->requireAuth();
         
         try {

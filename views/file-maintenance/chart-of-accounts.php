@@ -24,7 +24,6 @@
                                 <th>Account Name</th>
                                 <th>Type</th>
                                 <th>Group</th>
-                                <th>Balance</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -40,7 +39,6 @@
                                         </span>
                                     </td>
                                     <td><?= htmlspecialchars((string)$account['group_name']) ?></td>
-                                    <td class="text-end">₱<?= number_format($account['balance'], 2) ?></td>
                                     <td>
                                         <span class="badge bg-<?= $account['status'] === 'active' ? 'success' : 'secondary' ?>">
                                             <?= ucfirst($account['status']) ?>

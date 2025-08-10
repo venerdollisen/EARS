@@ -34,8 +34,8 @@ class CashReceiptController extends Controller {
         // Get accounts for dropdown (including inactive ones for now)
         $accounts = $this->chartOfAccountsModel->getAllAccountsIncludingInactive();
         
-        // Debug: Log the accounts being loaded
-        error_log('Accounts loaded for cash receipt form: ' . json_encode($accounts));
+        // Debug: Log the accounts being loaded (commented out to prevent output issues)
+        // error_log('Accounts loaded for cash receipt form: ' . json_encode($accounts));
         
         // Get suppliers for subsidiary accounts
         $suppliers = $this->supplierModel->getAllSuppliers();
@@ -65,10 +65,10 @@ class CashReceiptController extends Controller {
         
         try {
             $data = json_decode(file_get_contents('php://input'), true);
-            var_dump($data);
-            die();
-            // Debug: Log the received data
-            error_log('Cash receipt save data received: ' . json_encode($data));
+            // var_dump($data);
+            // die();
+            // Debug: Log the received data (commented out to prevent output issues)
+            // error_log('Cash receipt save data received: ' . json_encode($data));
             
             // Validate required fields
             $requiredFields = ['reference_no', 'transaction_date', 'amount', 'payment_form', 'payment_description'];
@@ -245,6 +245,14 @@ class CashReceiptController extends Controller {
      * Get recent cash receipts for AJAX
      */
     public function recent() {
+        // Clear any output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        // Set proper headers
+        header('Content-Type: application/json');
+        
         $this->requireAuth();
         
         try {

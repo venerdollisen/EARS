@@ -9,9 +9,11 @@ class SupplierModel extends Model {
     }
     
     public function getAllSuppliers() {
-        $sql = "SELECT s.*, coa.account_code, coa.account_name 
+        $sql = "SELECT s.*, coa.account_code, coa.account_name,
+                       vat_coa.account_code as vat_account_code, vat_coa.account_name as vat_account_name
                 FROM {$this->table} s 
                 LEFT JOIN chart_of_accounts coa ON s.account_id = coa.id 
+                LEFT JOIN chart_of_accounts vat_coa ON s.vat_account_id = vat_coa.id 
                 WHERE s.status = 'active' 
                 ORDER BY s.supplier_name ASC";
         $stmt = $this->db->prepare($sql);
