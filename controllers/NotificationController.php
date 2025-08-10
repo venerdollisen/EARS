@@ -13,6 +13,14 @@ class NotificationController extends Controller {
         $this->jsonResponse(['success' => true, 'data' => $items, 'unread' => $unread]);
     }
 
+    public function count() {
+        $this->requireAuth();
+        $notifModel = new NotificationModel();
+        $user = $this->auth->getCurrentUser();
+        $unread = $notifModel->getUnreadCountForUser((int)$user['id']);
+        $this->jsonResponse(['success' => true, 'unread' => $unread]);
+    }
+
     // View a notification: mark as read and return transaction details if link references a transaction id
     public function view($id) {
         $this->requireAuth();
