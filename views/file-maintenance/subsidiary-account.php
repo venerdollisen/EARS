@@ -180,39 +180,11 @@
                                 </div>
                             </div>
                             
-                            <div class="mb-3">
-                                <label for="vat_account_id" class="form-label">VAT Account</label>
-                                <select class="form-select" id="vat_account_id" name="vat_account_id">
-                                    <option value="">Select VAT Account</option>
-                                    <?php foreach ($accounts as $account): ?>
-                                        <option value="<?= $account['id'] ?>">
-                                            <?= htmlspecialchars((string)$account['account_code'] . ' - ' . (string)$account['account_name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+
                         </div>
                     </div>
                     
-                    <!-- Account Linking Section -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>Account Linking</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="account_id" class="form-label">Linked Account *</label>
-                                <select class="form-select" id="account_id" name="account_id" required>
-                                    <option value="">Select Account</option>
-                                    <?php foreach ($accounts as $account): ?>
-                                        <option value="<?= $account['id'] ?>">
-                                            <?= htmlspecialchars((string)$account['account_code'] . ' - ' . (string)$account['account_name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                    
                 </form>
             </div>
             <div class="modal-footer">
@@ -248,8 +220,6 @@ function editSupplier(supplier) {
     $('#vat_subject').val(supplier.vat_subject);
     $('#tin').val(supplier.tin);
     $('#vat_rate').val(supplier.vat_rate);
-    $('#vat_account_id').val(supplier.vat_account_id);
-    $('#account_id').val(supplier.account_id);
     
     $('#supplierModal').modal('show');
 }
@@ -288,7 +258,7 @@ function saveSupplier() {
     const form = document.getElementById('supplierForm');
     
     // Basic validation
-    const requiredFields = ['supplier_name', 'account_id'];
+    const requiredFields = ['supplier_name'];
     for (let field of requiredFields) {
         const input = document.getElementById(field);
         if (!input.value.trim()) {

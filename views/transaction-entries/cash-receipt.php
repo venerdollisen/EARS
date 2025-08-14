@@ -407,7 +407,7 @@ function updateTotals() {
     
     // Check if balanced and update label color/text
     const difference = Math.abs(totalDebit - totalCredit);
-    if (difference < 0.01) {
+    if (difference <= 0.001) {
         $('#balanceLabel').removeClass('text-danger').addClass('text-success').text('BALANCED');
     } else {
         $('#balanceLabel').removeClass('text-success').addClass('text-danger').text('UNBALANCED');
@@ -474,7 +474,7 @@ function checkBalance() {
     const roundedCredit = Math.round(totalCredit * 100) / 100;
     const difference = Math.abs(roundedDebit - roundedCredit);
     
-    if (difference < 0.01) {
+    if (difference <= 0.001) {
         EARS.showAlert('✅ Transaction is balanced!', 'success', '#globalAlertContainer');
     } else {
         EARS.showAlert('❌ Transaction is not balanced. Difference: ₱' + difference.toLocaleString('en-PH', {
@@ -501,7 +501,7 @@ function saveTransaction() {
     const roundedCredit = Math.round(totalCredit * 100) / 100;
     const difference = Math.abs(roundedDebit - roundedCredit);
     
-    if (difference >= 0.01) {
+    if (difference > 0.001) {
         EARS.showAlert('Transaction must be balanced before saving. Difference: ₱' + difference.toLocaleString('en-PH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2

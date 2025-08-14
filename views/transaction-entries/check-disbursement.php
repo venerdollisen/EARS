@@ -70,13 +70,28 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="particulars" class="form-label">Particulars *</label>
-                        <textarea class="form-control" id="particulars" name="particulars" rows="3" placeholder="Enter transaction particulars..." required></textarea>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                <label for="particulars" class="form-label">Particulars *</label>
+                                <textarea class="form-control" id="particulars" name="particulars" rows="3" placeholder="Enter transaction particulars..." required></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="check_payment_status" class="form-label">Check Payment Status</label>
+                                    <select class="form-select" id="check_payment_status" name="check_payment_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
+                                            <option value="Pending" selected>Pending</option>
+                                            <option value="Approved">Approved</option>
+                                            <option value="Rejected">Rejected</option>
+                                            <option value="On Hold">On Hold</option>
+                                        </select>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-4" style="display: none;">
                             <div class="mb-3">
                                 <label for="cv_status" class="form-label">CV Status</label>
                                 <select class="form-select" id="cv_status" name="cv_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
@@ -86,7 +101,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" style="display: none;">
                             <div class="mb-3">
                                 <label for="cv_checked" class="form-label">CV Checked</label>
                                 <select class="form-select" id="cv_checked" name="cv_checked" <?= $isStatusLocked ? 'disabled' : '' ?> >
@@ -96,17 +111,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="check_payment_status" class="form-label">Check Payment Status</label>
-                                <select class="form-select" id="check_payment_status" name="check_payment_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                        <option value="Pending" selected>Pending</option>
-                                        <option value="Approved">Approved</option>
-                                        <option value="Rejected">Rejected</option>
-                                        <option value="On Hold">On Hold</option>
-                                    </select>
-                                </div>
-                            </div>
+                            
                         </div>
 
                     <hr>
@@ -292,7 +297,7 @@ function calculateTotals(){
     // Update balance label
     const difference = Math.abs(totalDebit - totalCredit);
     const balanceLabel = document.getElementById('balanceLabel');
-    if (difference < 0.01) {
+    if (difference <= 0.001) {
         balanceLabel.classList.remove('text-danger');
         balanceLabel.classList.add('text-success');
         balanceLabel.textContent = 'BALANCED';
@@ -357,7 +362,7 @@ function saveTransaction(){
     // Fix floating point precision issues
     const roundedTotalD = Math.round(totalD * 100) / 100;
     const roundedTotalC = Math.round(totalC * 100) / 100;
-    if (Math.abs(roundedTotalD-roundedTotalC) >= 0.01){ EARS.showAlert('Transaction is not balanced.', 'warning'); return; }
+    if (Math.abs(roundedTotalD-roundedTotalC) > 0.001){ EARS.showAlert('Transaction is not balanced.', 'warning'); return; }
 
     const btn = document.querySelector('button[onclick="saveTransaction()"]');
     const btnTxt = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';

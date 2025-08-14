@@ -189,6 +189,71 @@ function showNotificationModal(trn){
   if (trn) {
     currentNotifTransactionId = trn.id;
     const amount = (trn.amount || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    
+    // Generate distribution table if child transactions exist
+    let distributionTable = '';
+    if (trn.child_transactions && trn.child_transactions.length > 0) {
+      const childTransactions = trn.child_transactions;
+      let totalDebit = 0;
+      let totalCredit = 0;
+      
+      const distributionRows = childTransactions.map(transaction => {
+        // Determine transaction type from reference number if transaction_type is empty
+        let transactionType = transaction.transaction_type;
+        if (!transactionType || transactionType === '') {
+          if (transaction.reference_no && transaction.reference_no.includes('-D')) {
+            transactionType = 'debit';
+          } else if (transaction.reference_no && transaction.reference_no.includes('-C')) {
+            transactionType = 'credit';
+          }
+        }
+        
+        const amount = parseFloat(transaction.amount) || 0;
+        if (transactionType === 'debit') totalDebit += amount;
+        if (transactionType === 'credit') totalCredit += amount;
+        
+        return `
+          <tr>
+            <td>${transaction.account_name || 'N/A'}</td>
+            <td>${transaction.project_name || '-'}</td>
+            <td>${transaction.department_name || '-'}</td>
+            <td>${transaction.supplier_name || '-'}</td>
+            <td class="text-end">${transactionType === 'debit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+            <td class="text-end">${transactionType === 'credit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      distributionTable = `
+        <hr class="my-3">
+        <h6 class="fw-bold mb-2">Account Distribution</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>Account</th>
+                <th>Project</th>
+                <th>Department</th>
+                <th>Subsidiary</th>
+                <th>Debit</th>
+                <th>Credit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${distributionRows}
+            </tbody>
+            <tfoot>
+              <tr class="table-info">
+                <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                <td class="text-end"><strong>₱${totalDebit.toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                <td class="text-end"><strong>₱${totalCredit.toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+    }
+    
     details.innerHTML = `
       <div><strong>Type:</strong> ${trn.transaction_type}</div>
       <div><strong>Voucher:</strong> ${trn.reference_no}</div>
@@ -197,6 +262,7 @@ function showNotificationModal(trn){
       <div><strong>Amount:</strong> ₱${amount}</div>
       <hr class="my-2">
       <div class="text-muted">Distribution follows header decision on approval/rejection.</div>
+      ${distributionTable}
     `;
   } else {
     details.textContent = 'No details available.';

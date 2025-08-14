@@ -92,34 +92,15 @@
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="particulars" class="form-label">Particulars *</label>
-                        <textarea class="form-control" id="particulars" name="particulars" rows="3" 
-                                  placeholder="Enter transaction particulars..." required></textarea>
-                    </div>
-                    
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-8">
                             <div class="mb-3">
-                                <label for="cv_status" class="form-label">CV Status</label>
-                                <select class="form-select" id="cv_status" name="cv_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Approved">Approved</option>
-                                    <option value="Rejected">Rejected</option>
-                                </select>
+                                <label for="particulars" class="form-label">Particulars *</label>
+                                <textarea class="form-control" id="particulars" name="particulars" rows="3" 
+                                        placeholder="Enter transaction particulars..." required></textarea>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="cv_checked" class="form-label">CV Checked</label>
-                                <select class="form-select" id="cv_checked" name="cv_checked" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Checked">Checked</option>
-                                    <option value="Unchecked">Unchecked</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="check_payment_status" class="form-label">Payment Status</label>
                                 <select class="form-select" id="check_payment_status" name="check_payment_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
@@ -130,7 +111,31 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3" style="display: none;">
+                            <div class="mb-3">
+                                <label for="cv_status" class="form-label">CV Status</label>
+                                <select class="form-select" id="cv_status" name="cv_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
+                                    <option value="Pending" selected>Pending</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3" style="display: none;">
+                            <div class="mb-3">
+                                <label for="cv_checked" class="form-label">CV Checked</label>
+                                <select class="form-select" id="cv_checked" name="cv_checked" <?= $isStatusLocked ? 'disabled' : '' ?> >
+                                    <option value="Pending" selected>Pending</option>
+                                    <option value="Checked">Checked</option>
+                                    <option value="Unchecked">Unchecked</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3" style="display: none;">
                             <div class="mb-3">
                                 <label for="return_reason" class="form-label">Reason of Return</label>
                                 <input type="text" class="form-control" id="return_reason" name="return_reason" 
@@ -469,7 +474,7 @@ function calculateTotals() {
     // Update balance label
     const difference = Math.abs(totalDebit - totalCredit);
     const balanceLabel = document.getElementById('balanceLabel');
-    if (difference < 0.01) {
+    if (difference <= 0.001) {
         balanceLabel.classList.remove('text-danger');
         balanceLabel.classList.add('text-success');
         balanceLabel.textContent = 'BALANCED';
@@ -565,7 +570,7 @@ function saveTransaction() {
     const roundedDebit = Math.round(totalDebit * 100) / 100;
     const roundedCredit = Math.round(totalCredit * 100) / 100;
     
-    if (Math.abs(roundedDebit - roundedCredit) >= 0.01) {
+    if (Math.abs(roundedDebit - roundedCredit) > 0.001) {
         EARS.showAlert('Transaction is not balanced. Please check your entries.', 'warning');
         return;
     }
