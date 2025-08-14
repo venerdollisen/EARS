@@ -112,6 +112,81 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 let currentNotifTransactionId = null;
 
+// Custom alert function with guaranteed auto-dismiss
+function showAutoDismissAlert(message, type = 'info') {
+  // Create alert element
+  const alertElement = document.createElement('div');
+  alertElement.className = `alert alert-${type} alert-dismissible fade show shadow`;
+  alertElement.setAttribute('role', 'alert');
+  alertElement.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+  
+  // Find or create container
+  let container = document.getElementById('globalAlertContainer');
+  if (!container) {
+    container = document.getElementById('alertContainer');
+  }
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'globalAlertContainer';
+    container.style.position = 'fixed';
+    container.style.top = '20px';
+    container.style.left = '50%';
+    container.style.transform = 'translateX(-50%)';
+    container.style.zIndex = '9999';
+    container.style.maxWidth = '600px';
+    container.style.width = '90%';
+    document.body.appendChild(container);
+  }
+  
+  // Clear existing alerts and add new one
+  container.innerHTML = '';
+  container.appendChild(alertElement);
+  
+  // Scroll to top
+  try {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) {
+    window.scrollTo(0, 0);
+  }
+  
+  // Auto-dismiss after 2.5 seconds with fade out effect
+  const dismissTimeout = setTimeout(function() {
+    dismissAlert(alertElement);
+  }, 2500);
+  
+  // Handle manual close button click
+  const closeButton = alertElement.querySelector('.btn-close');
+  if (closeButton) {
+    // Remove any existing event listeners to prevent duplication
+    const newCloseButton = closeButton.cloneNode(true);
+    closeButton.parentNode.replaceChild(newCloseButton, closeButton);
+    
+    newCloseButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      clearTimeout(dismissTimeout);
+      dismissAlert(alertElement);
+    });
+  }
+  
+  // Helper function to dismiss alert
+  function dismissAlert(element) {
+    if (element && element.parentNode) {
+      element.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+      element.style.opacity = '0';
+      element.style.transform = 'translateY(-10px)';
+      setTimeout(function() {
+        if (element && element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+      }, 300);
+    }
+  }
+}
+
 // Function to reload notification count
 function reloadNotificationCount() {
   fetch(APP_URL + '/api/notifications/count')
@@ -267,6 +342,10 @@ function showNotificationModal(trn){
   } else {
     details.textContent = 'No details available.';
   }
+  
+  // Clear comment field when opening modal
+  document.getElementById('notifComment').value = '';
+  
   const modal = new bootstrap.Modal(document.getElementById('notifModal'));
   modal.show();
 }
@@ -294,39 +373,47 @@ document.addEventListener('click', function(e){
       .then(r => r.json()).then(resp => {
         if (resp.success) {
           bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
-          // Show success message
-          if (window.EARS && window.EARS.showAlert) {
-            window.EARS.showAlert('Transaction approved successfully!', 'success');
-          }
+                     // Show success message
+           if (window.EARS && window.EARS.showAlert) {
+             window.EARS.showAlert('Transaction approved successfully!', 'success');
+           } else {
+             showAutoDismissAlert('Transaction approved successfully!', 'success');
+           }
           // Reload notification count and list after a short delay
           setTimeout(() => {
             reloadNotificationCount();
             reloadNotificationList();
           }, 500);
-        } else {
-          // Show error message
-          if (window.EARS && window.EARS.showAlert) {
-            window.EARS.showAlert('Failed to approve transaction: ' + (resp.message || 'Unknown error'), 'danger');
-          }
-        }
-      }).catch(error => {
-        // Show error message
-        if (window.EARS && window.EARS.showAlert) {
-          window.EARS.showAlert('Failed to approve transaction: ' + error.message, 'danger');
-        }
-      });
+                 } else {
+           // Show error message
+           if (window.EARS && window.EARS.showAlert) {
+             window.EARS.showAlert('Failed to approve transaction: ' + (resp.message || 'Unknown error'), 'danger');
+           } else {
+             showAutoDismissAlert('Failed to approve transaction: ' + (resp.message || 'Unknown error'), 'danger');
+           }
+         }
+       }).catch(error => {
+         // Show error message
+         if (window.EARS && window.EARS.showAlert) {
+           window.EARS.showAlert('Failed to approve transaction: ' + error.message, 'danger');
+         } else {
+           showAutoDismissAlert('Failed to approve transaction: ' + error.message, 'danger');
+         }
+       });
   }
   if (e.target && e.target.id === 'notifRejectBtn') {
     if (!currentNotifTransactionId) return;
     const reason = document.getElementById('notifComment').value.trim();
     
-    // Validate that a reason is provided for rejection
-    if (!reason) {
-      if (window.EARS && window.EARS.showAlert) {
-        window.EARS.showAlert('Please provide a reason for rejection.', 'warning');
-      }
-      return;
-    }
+         // Validate that a reason is provided for rejection
+     if (!reason) {
+       if (window.EARS && window.EARS.showAlert) {
+         window.EARS.showAlert('Please provide a reason for rejection.', 'warning');
+       } else {
+         showAutoDismissAlert('Please provide a reason for rejection.', 'warning');
+       }
+       return;
+     }
     
     // Show confirmation dialog
     if (!confirm('Do you want to reject this transaction?')) {
@@ -337,29 +424,48 @@ document.addEventListener('click', function(e){
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason })
     }).then(r => r.json()).then(resp => {
-      if (resp.success) {
-        bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
-        // Show success message
-        if (window.EARS && window.EARS.showAlert) {
-          window.EARS.showAlert('Transaction rejected successfully!', 'success');
-        }
-        // Reload notification count and list after a short delay
-        setTimeout(() => {
-          reloadNotificationCount();
-          reloadNotificationList();
-        }, 500);
-      } else {
-        // Show error message
-        if (window.EARS && window.EARS.showAlert) {
-          window.EARS.showAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
-        }
-      }
-    }).catch(error => {
-      // Show error message
-      if (window.EARS && window.EARS.showAlert) {
-        window.EARS.showAlert('Failed to reject transaction: ' + error.message, 'danger');
-      }
-    });
+              if (resp.success) {
+          bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
+                     // Show success message with guaranteed auto-dismiss
+           if (window.EARS && window.EARS.showAlert) {
+             window.EARS.showAlert('Transaction rejected successfully!', 'success');
+           } else {
+             showAutoDismissAlert('Transaction rejected successfully!', 'success');
+           }
+          // Reload notification count and list after a short delay
+          setTimeout(() => {
+            reloadNotificationCount();
+            reloadNotificationList();
+          }, 500);
+                 } else {
+           // Show error message with guaranteed auto-dismiss
+           if (window.EARS && window.EARS.showAlert) {
+             window.EARS.showAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
+           } else {
+             showAutoDismissAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
+           }
+         }
+     }).catch(error => {
+       // Show error message with guaranteed auto-dismiss
+       if (window.EARS && window.EARS.showAlert) {
+         window.EARS.showAlert('Failed to reject transaction: ' + error.message, 'danger');
+       } else {
+         showAutoDismissAlert('Failed to reject transaction: ' + error.message, 'danger');
+       }
+     });
+  }
+});
+
+// Clean up modal when it's hidden
+document.getElementById('notifModal').addEventListener('hidden.bs.modal', function() {
+  // Reset comment field
+  document.getElementById('notifComment').value = '';
+  // Reset current transaction ID
+  currentNotifTransactionId = null;
+  // Clear any existing alerts to prevent conflicts
+  const alertContainer = document.getElementById('globalAlertContainer');
+  if (alertContainer) {
+    alertContainer.innerHTML = '';
   }
 });
 </script>

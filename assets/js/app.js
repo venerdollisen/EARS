@@ -14,10 +14,24 @@ $(document).ready(function() {
         }
     });
 
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function() {
-        $('.alert').fadeOut();
-    }, 5000);
+    // Aggressive auto-hide for ALL alerts - guaranteed to work
+    function forceAutoHideAllAlerts() {
+        $('.alert').each(function() {
+            const $alert = $(this);
+            if (!$alert.data('auto-hide-set')) {
+                $alert.data('auto-hide-set', true);
+                setTimeout(function() {
+                    $alert.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                }, 2500);
+            }
+        });
+    }
+    
+    // Run immediately and then every 500ms to catch ALL alerts
+    forceAutoHideAllAlerts();
+    setInterval(forceAutoHideAllAlerts, 500);
 
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -50,6 +64,24 @@ $(document).ready(function() {
             } catch (e) {
                 window.scrollTo(0, 0);
             }
+            
+            // Force auto-dismiss after 2.5 seconds with improved fade out effect
+            const dismissTimeout = setTimeout(function() {
+                $container.find('.alert').fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 2500);
+            
+            // Handle manual close button click to clear timeout
+            // Remove any existing event listeners to prevent duplication
+            $container.find('.btn-close').off('click').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearTimeout(dismissTimeout);
+                $(this).closest('.alert').fadeOut(300, function() {
+                    $(this).remove();
+                });
+            });
         },
 
         // Show loading spinner

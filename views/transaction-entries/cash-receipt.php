@@ -488,7 +488,7 @@ function saveTransaction() {
     const form = $('#transactionForm');
     
     if (!EARS.validateForm('#transactionForm')) {
-        EARS.showAlert('Please fill in all required fields.', 'warning', '#globalAlertContainer');
+        EARS.showAlert('Please fill in all required fields.', 'danger', '#globalAlertContainer');
         return;
     }
     

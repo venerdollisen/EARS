@@ -21,13 +21,14 @@ class NotificationController extends Controller {
         $this->jsonResponse(['success' => true, 'unread' => $unread]);
     }
 
-    // View a notification: mark as read and return transaction details if link references a transaction id
+    // View a notification: return transaction details if link references a transaction id (DO NOT mark as read)
     public function view($id) {
         $this->requireAuth();
         try {
             $user = $this->auth->getCurrentUser();
             $notifModel = new NotificationModel();
-            $notifModel->markAsRead((int)$id, (int)$user['id']);
+            // DO NOT mark as read when viewing - only mark as read when transaction is approved/rejected
+            // $notifModel->markAsRead((int)$id, (int)$user['id']);
             // Also try to detect transaction id in the link query (?id=)
             $stmt = $this->db->prepare("SELECT link FROM notifications WHERE id = ? AND recipient_user_id = ?");
             $stmt->execute([(int)$id, (int)$user['id']]);

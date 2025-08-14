@@ -23,7 +23,7 @@
                 <h6 class="m-0 font-weight-bold text-primary">Check Disbursement Details</h6>
                 </div>
                 <div class="card-body">
-                <form id="transactionForm">
+                <form id="transactionForm" data-autosave="false">
                     <input type="hidden" name="transaction_type" value="check_disbursement">
 
                         <div class="row">

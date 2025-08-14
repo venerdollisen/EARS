@@ -140,14 +140,27 @@
                 });
             });
             
+            // Use EARS.showAlert instead of local showAlert function
             function showAlert(message, type) {
-                const alertHtml = `
-                    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-                $('#alertContainer').html(alertHtml);
+                if (window.EARS && window.EARS.showAlert) {
+                    window.EARS.showAlert(message, type);
+                } else {
+                    // Fallback for when EARS is not available
+                    const alertHtml = `
+                        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                            ${message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    $('#alertContainer').html(alertHtml);
+                    
+                    // Auto-remove after 2.5 seconds to match EARS.showAlert
+                    setTimeout(() => {
+                        $('#alertContainer .alert').fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                    }, 2500);
+                }
             }
         });
     </script>
