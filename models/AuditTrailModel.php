@@ -89,6 +89,53 @@ class AuditTrailModel extends Model {
     }
     
     /**
+     * Get total count of audit trail entries with filters
+     */
+    public function getAuditTrailCount($filters = []) {
+        $sql = "SELECT COUNT(*) as total 
+                FROM {$this->table} at 
+                LEFT JOIN users u ON at.user_id = u.id 
+                WHERE 1=1";
+        $params = [];
+        
+        // Apply filters
+        if (!empty($filters['user_id'])) {
+            $sql .= " AND at.user_id = ?";
+            $params[] = $filters['user_id'];
+        }
+        
+        if (!empty($filters['action'])) {
+            $sql .= " AND at.action = ?";
+            $params[] = $filters['action'];
+        }
+        
+        if (!empty($filters['table_name'])) {
+            $sql .= " AND at.table_name = ?";
+            $params[] = $filters['table_name'];
+        }
+        
+        if (!empty($filters['record_id'])) {
+            $sql .= " AND at.record_id = ?";
+            $params[] = $filters['record_id'];
+        }
+        
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(at.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(at.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$result['total'];
+    }
+    
+    /**
      * Get audit trail for a specific record
      */
     public function getRecordAuditTrail($tableName, $recordId) {

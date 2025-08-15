@@ -1,3 +1,37 @@
+<?php
+// Helper functions for role-based access control
+function isAssistant($user) {
+    return ($user['role'] ?? '') === 'user';
+}
+
+function isAdmin($user) {
+    return ($user['role'] ?? '') === 'admin';
+}
+
+function isManager($user) {
+    return ($user['role'] ?? '') === 'manager';
+}
+
+function hasPermission($user, $permission) {
+    $role = $user['role'] ?? '';
+    
+    switch ($permission) {
+        case 'file_maintenance':
+        case 'parameters':
+        case 'user_management':
+        case 'audit_trail':
+        case 'system_settings':
+            return in_array($role, ['admin', 'manager']);
+        case 'transaction_entries':
+        case 'reports':
+        case 'summary':
+        case 'profile_settings':
+            return true; // All roles can access
+        default:
+            return false;
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

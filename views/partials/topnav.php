@@ -265,6 +265,23 @@ function showNotificationModal(trn){
     currentNotifTransactionId = trn.id;
     const amount = (trn.amount || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     
+    // Format transaction type for display
+    let transactionType = 'Unknown';
+    switch(trn.transaction_type) {
+      case 'cash_receipt':
+        transactionType = 'Cash Receipt';
+        break;
+      case 'cash_disbursement':
+        transactionType = 'Cash Disbursement';
+        break;
+      case 'check_disbursement':
+        transactionType = 'Check Disbursement';
+        break;
+      default:
+        transactionType = trn.transaction_type || 'Unknown';
+        break;
+    }
+    
     // Generate distribution table if child transactions exist
     let distributionTable = '';
     if (trn.child_transactions && trn.child_transactions.length > 0) {
@@ -330,7 +347,7 @@ function showNotificationModal(trn){
     }
     
     details.innerHTML = `
-      <div><strong>Type:</strong> ${trn.transaction_type}</div>
+      <div><strong>Type:</strong> ${transactionType}</div>
       <div><strong>Voucher:</strong> ${trn.reference_no}</div>
       <div><strong>Date:</strong> ${new Date(trn.transaction_date).toLocaleDateString()}</div>
       <div><strong>Payee:</strong> ${trn.payee_name || ''}</div>

@@ -10,6 +10,7 @@ class FileMaintenanceController extends Controller {
     
     public function index() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $this->render('file-maintenance/index', [
             'user' => $this->auth->getCurrentUser()
@@ -18,6 +19,7 @@ class FileMaintenanceController extends Controller {
     
     public function accountTitleGroup() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $accountTitleGroupModel = new AccountTitleGroupModel();
         $groups = $accountTitleGroupModel->getAllGroups();
@@ -30,6 +32,7 @@ class FileMaintenanceController extends Controller {
     
     public function coaAccountType() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $coaAccountTypeModel = new COAAccountTypeModel();
         $types = $coaAccountTypeModel->getAllTypes();
@@ -42,6 +45,7 @@ class FileMaintenanceController extends Controller {
     
     public function chartOfAccounts() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $chartOfAccountsModel = new ChartOfAccountsModel();
         $coaAccountTypeModel = new COAAccountTypeModel();
@@ -61,6 +65,7 @@ class FileMaintenanceController extends Controller {
     
     public function subsidiaryAccount() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $supplierModel = new SupplierModel();
         $chartOfAccountsModel = new ChartOfAccountsModel();
@@ -77,6 +82,7 @@ class FileMaintenanceController extends Controller {
     
     public function projects() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $projectModel = new ProjectModel();
         $projects = $projectModel->getAllProjects();
@@ -89,6 +95,7 @@ class FileMaintenanceController extends Controller {
     
     public function departments() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $departmentModel = new DepartmentModel();
         $departments = $departmentModel->getAllDepartments();
@@ -101,6 +108,7 @@ class FileMaintenanceController extends Controller {
     
     public function save() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $data = $this->getRequestData();
         
@@ -232,6 +240,7 @@ class FileMaintenanceController extends Controller {
     
     public function delete() {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         $data = $this->getRequestData();
         
@@ -362,6 +371,7 @@ class FileMaintenanceController extends Controller {
     
     public function getProject($id) {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         try {
             $projectModel = new ProjectModel();
@@ -379,6 +389,7 @@ class FileMaintenanceController extends Controller {
     
     public function getDepartment($id) {
         $this->requireAuth();
+        $this->requirePermission('file_maintenance');
         
         try {
             $departmentModel = new DepartmentModel();

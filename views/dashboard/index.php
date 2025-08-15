@@ -146,7 +146,7 @@
     </div>
 
     <!-- Account Balance Chart -->
-    <div class="row mb-4">
+    <div class="row mb-4" style="display: none;">
         <div class="col-xl-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">

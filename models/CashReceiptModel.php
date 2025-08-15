@@ -218,40 +218,40 @@ class CashReceiptModel extends Model {
     /**
      * Update cash receipt transaction
      */
-    public function updateCashReceipt($id, $data) {
+    public function updateCashReceipt($id, $updateData) {
         try {
-            // Validate required fields
-            if (empty($data['reference_no']) || empty($data['amount']) || empty($data['accounts'])) {
-                throw new Exception('Missing required fields for cash receipt update');
+            $this->db->beginTransaction();
+            
+            // Update main transaction
+            $sql = "UPDATE {$this->table} SET 
+                    reference_no = :reference_no,
+                    transaction_date = :transaction_date,
+                    check_payment_status = :check_payment_status,
+                    updated_by = :updated_by,
+                    updated_at = :updated_at
+                    WHERE id = :id AND transaction_type = 'cash_receipt'";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindParam(':reference_no', $updateData['reference_no']);
+            $stmt->bindParam(':transaction_date', $updateData['transaction_date']);
+            $stmt->bindParam(':check_payment_status', $updateData['payment_status']);
+            $stmt->bindParam(':updated_by', $updateData['updated_by']);
+            $stmt->bindParam(':updated_at', $updateData['updated_at']);
+            $stmt->bindParam(':id', $id);
+            
+            $result = $stmt->execute();
+            
+            if (!$result) {
+                throw new Exception('Failed to update cash receipt');
             }
             
-            // Set transaction type
-            $data['transaction_type'] = 'cash_receipt';
-            
-            // First, delete existing child transactions
-            $this->deleteChildTransactions($id);
-            
-            // Update the main transaction
-            $updateData = [
-                'reference_no' => $data['reference_no'],
-                'transaction_date' => $data['transaction_date'],
-                'amount' => $data['amount'],
-                'description' => $data['description'] ?? '',
-                'payment_form' => $data['payment_form'] ?? '',
-                'check_number' => $data['check_number'] ?? '',
-                'bank' => $data['bank'] ?? '',
-                'billing_number' => $data['billing_number'] ?? '',
-                'payment_description' => $data['payment_description'] ?? '',
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-            
-            $this->update($id, $updateData);
-            
-            // Create new child transactions
-            return $this->transactionModel->createEnhancedTransaction($data);
+            $this->db->commit();
+            return true;
             
         } catch (Exception $e) {
-            throw new Exception('Failed to update cash receipt: ' . $e->getMessage());
+            $this->db->rollBack();
+            error_log('Error updating cash receipt: ' . $e->getMessage());
+            return false;
         }
     }
     

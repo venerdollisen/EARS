@@ -1,3 +1,4 @@
+<?php $isStatusLocked = isset($user['role']) && in_array($user['role'], ['user','assistant']); ?>
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -39,6 +40,7 @@
                                 <small class="form-text text-muted">Current date: <?= date('Y-m-d') ?></small>
                             </div>
                         </div>
+                        
                     </div>
                     
                     <div class="row">
@@ -79,10 +81,25 @@
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="payment_for" class="form-label">Payment Description</label>
-                        <textarea class="form-control" id="payment_for" name="payment_for" rows="2" 
-                                  placeholder="Enter payment description..."></textarea>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="payment_for" class="form-label">Payment Description *</label>
+                                <textarea class="form-control" id="payment_for" name="payment_for" rows="2" 
+                                          placeholder="Enter payment description..." required></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="payment_status" class="form-label">Status</label>
+                                <select class="form-select" id="payment_status" name="payment_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
+                                    <option value="Pending" selected>Pending</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Rejected">Rejected</option>
+                                    <option value="On Hold">On Hold</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     
                     <hr>
@@ -142,15 +159,15 @@
             <div class="card-body">
                 <!-- Filters -->
                 <div class="row mb-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="filterDate" class="form-label">Date Range</label>
                         <input type="date" class="form-control" id="filterDate" placeholder="Filter by date">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="filterReference" class="form-label">Reference Number</label>
                         <input type="text" class="form-control" id="filterReference" placeholder="Filter by reference number">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="filterPaymentForm" class="form-label">Payment Form</label>
                         <select class="form-select" id="filterPaymentForm">
                             <option value="">All Payment Forms</option>
@@ -160,7 +177,17 @@
                             <option value="credit_card">Credit Card</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label for="filterStatus" class="form-label">Status</label>
+                        <select class="form-select" id="filterStatus">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">&nbsp;</label>
                         <div>
                             <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
@@ -197,7 +224,29 @@
                                         <td class="text-end">₱<?= number_format($transaction['amount'], 2) ?></td>
                                         <td><?= htmlspecialchars($transaction['description'] ?? '-') ?></td>
                                         <td>
-                                            <span class="badge bg-success">Posted</span>
+                                            <?php 
+                                            $status = $transaction['check_payment_status'] ?? 'Pending';
+                                            $statusClass = 'bg-secondary';
+                                            
+                                            switch ($status) {
+                                                case 'Approved':
+                                                    $statusClass = 'bg-success';
+                                                    break;
+                                                case 'Rejected':
+                                                    $statusClass = 'bg-danger';
+                                                    break;
+                                                case 'On Hold':
+                                                    $statusClass = 'bg-warning';
+                                                    break;
+                                                case 'Pending':
+                                                default:
+                                                    $statusClass = 'bg-secondary';
+                                                    break;
+                                            }
+                                            ?>
+                                            <span class="badge <?= $statusClass ?>">
+                                                <?= htmlspecialchars($status) ?>
+                                            </span>
                                         </td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-outline-primary view-transaction-btn" 
@@ -526,7 +575,7 @@ function saveTransaction() {
         check_number: $('#check_number').val(),
         bank: $('#bank').val(),
         billing_number: $('#billing_number').val(),
-        payment_for: $('#payment_for').val(),
+        payment_status: $('#payment_status').val(),
         account_distribution: []
     };
     
@@ -618,6 +667,26 @@ function loadRecentTransactions(bustCache = false) {
                 // Build fresh tbody HTML
                 let html = '';
                 transactions.forEach(t => {
+                    // Determine status badge class based on check_payment_status
+                    let statusClass = 'bg-secondary';
+                    let status = t.check_payment_status || 'Pending';
+                    
+                    switch (status) {
+                        case 'Approved':
+                            statusClass = 'bg-success';
+                            break;
+                        case 'Rejected':
+                            statusClass = 'bg-danger';
+                            break;
+                        case 'On Hold':
+                            statusClass = 'bg-warning';
+                            break;
+                        case 'Pending':
+                        default:
+                            statusClass = 'bg-secondary';
+                            break;
+                    }
+                    
                     html += `
                         <tr>
                             <td>${new Date(t.transaction_date).toLocaleDateString('en-PH')}</td>
@@ -625,7 +694,7 @@ function loadRecentTransactions(bustCache = false) {
                             <td>${t.payment_form || 'Cash'}</td>
                             <td class="text-end">₱${parseFloat(t.amount).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
                             <td>${t.description || '-'}</td>
-                            <td><span class="badge bg-success">Posted</span></td>
+                            <td><span class="badge ${statusClass}">${status}</span></td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-primary view-transaction-btn" data-transaction-id="${t.id}">
                                     <i class="bi bi-eye"></i> View
@@ -769,12 +838,18 @@ function initializeFilters() {
     $('#filterPaymentForm').on('change', function() {
         filterTransactions();
     });
+    
+    // Status filter
+    $('#filterStatus').on('change', function() {
+        filterTransactions();
+    });
 }
 
 function filterTransactions() {
     const dateFilter = $('#filterDate').val();
     const referenceFilter = $('#filterReference').val().toLowerCase();
     const paymentFormFilter = $('#filterPaymentForm').val();
+    const statusFilter = $('#filterStatus').val();
     
     // Remove existing custom filtering
     $.fn.dataTable.ext.search.pop();
@@ -784,6 +859,7 @@ function filterTransactions() {
         const rowDate = data[0]; // Date column (format: "Dec 04, 2025")
         const rowReference = data[1].toLowerCase(); // Reference column
         const rowPaymentForm = data[2].toLowerCase(); // Payment form column
+        const rowStatus = data[5]; // Status column
         
         // Date filter - convert row date to YYYY-MM-DD format for comparison
         if (dateFilter) {
@@ -804,6 +880,11 @@ function filterTransactions() {
             return false;
         }
         
+        // Status filter
+        if (statusFilter && rowStatus !== statusFilter) {
+            return false;
+        }
+        
         return true;
     });
     
@@ -814,6 +895,7 @@ function clearFilters() {
     $('#filterDate').val('');
     $('#filterReference').val('');
     $('#filterPaymentForm').val('');
+    $('#filterStatus').val('');
     
     // Remove all custom filtering
     while ($.fn.dataTable.ext.search.length > 0) {

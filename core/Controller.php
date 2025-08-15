@@ -1,5 +1,9 @@
 <?php
+require_once BASE_PATH . '/core/AuthorizationTrait.php';
+
 class Controller {
+    use AuthorizationTrait;
+    
     protected $db;
     protected $auth;
 

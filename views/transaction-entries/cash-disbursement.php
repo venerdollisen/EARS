@@ -539,6 +539,7 @@ function saveTransaction() {
     const form = document.getElementById('transactionForm');
     const formData = new FormData(form);
     
+    
     // Validate required fields
     if (!formData.get('voucher_number') || !formData.get('payee_name') || !formData.get('particulars')) {
         EARS.showAlert('Please fill in all required fields', 'danger');
@@ -687,6 +688,27 @@ function loadRecentTransactions() {
                 items.forEach(t => {
                     const amt = (t.amount != null ? t.amount : (t.total_amount != null ? t.total_amount : 0));
                     const dateStr = t.transaction_date ? new Date(t.transaction_date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }) : '-';
+                    
+                    // Determine status badge class based on check_payment_status
+                    let statusClass = 'bg-secondary';
+                    let status = t.check_payment_status || 'Pending';
+                    
+                    switch (status) {
+                        case 'Approved':
+                            statusClass = 'bg-success';
+                            break;
+                        case 'Rejected':
+                            statusClass = 'bg-danger';
+                            break;
+                        case 'On Hold':
+                            statusClass = 'bg-warning';
+                            break;
+                        case 'Pending':
+                        default:
+                            statusClass = 'bg-secondary';
+                            break;
+                    }
+                    
                     html += `
                         <tr>
                             <td>${dateStr}</td>
@@ -694,7 +716,7 @@ function loadRecentTransactions() {
                             <td class="text-end">₱${parseFloat(amt || 0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
                             <td>${t.particulars || t.description || '-'}</td>
                             <td>${t.payee_name || '-'}</td>
-                            <td><span class="badge bg-success">Posted</span></td>
+                            <td><span class="badge ${statusClass}">${status}</span></td>
                             <td>
                               <button type="button" class="btn btn-sm btn-outline-primary cd-view-transaction-btn" data-transaction-id="${t.id}"><i class="bi bi-eye"></i> View</button>
                             </td>
@@ -706,13 +728,34 @@ function loadRecentTransactions() {
                 const rowsForDT = items.map(t => {
                     const amt = (t.amount != null ? t.amount : (t.total_amount != null ? t.total_amount : 0));
                     const dateStr = t.transaction_date ? new Date(t.transaction_date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }) : '-';
+                    
+                    // Determine status badge class based on check_payment_status
+                    let statusClass = 'bg-secondary';
+                    let status = t.check_payment_status || 'Pending';
+                    
+                    switch (status) {
+                        case 'Approved':
+                            statusClass = 'bg-success';
+                            break;
+                        case 'Rejected':
+                            statusClass = 'bg-danger';
+                            break;
+                        case 'On Hold':
+                            statusClass = 'bg-warning';
+                            break;
+                        case 'Pending':
+                        default:
+                            statusClass = 'bg-secondary';
+                            break;
+                    }
+                    
                     return [
                         dateStr,
                         `<span class="badge bg-primary">${t.reference_no || t.voucher_number || '-'}</span>`,
                         `₱${parseFloat(amt || 0).toLocaleString('en-PH',{minimumFractionDigits:2})}`,
                         (t.particulars || t.description || '-'),
                         (t.payee_name || '-'),
-                        '<span class="badge bg-success">Posted</span>',
+                        `<span class="badge ${statusClass}">${status}</span>`,
                         `<button type="button" class="btn btn-sm btn-outline-primary cd-view-transaction-btn" data-transaction-id="${t.id}"><i class="bi bi-eye"></i> View</button>`
                     ];
                 });

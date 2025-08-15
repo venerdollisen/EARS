@@ -5,6 +5,7 @@ class ParametersController extends Controller {
     
     public function index() {
         $this->requireAuth();
+        $this->requirePermission('parameters');
         
         $this->render('parameters/index', [
             'user' => $this->auth->getCurrentUser()
@@ -13,6 +14,7 @@ class ParametersController extends Controller {
     
     public function accounting() {
         $this->requireAuth();
+        $this->requirePermission('parameters');
         
         // Get accounting parameters using model
         $parametersModel = new AccountingParametersModel();
@@ -26,6 +28,7 @@ class ParametersController extends Controller {
     
     public function save() {
         $this->requireAuth();
+        $this->requirePermission('parameters');
         
         $data = $this->getRequestData();
         

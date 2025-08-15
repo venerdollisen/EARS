@@ -5,13 +5,8 @@ require_once BASE_PATH . '/models/UserModel.php';
 class UserManagementController extends Controller {
     public function index() {
         $this->requireAuth();
-        // Only admins/managers can access
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Forbidden']);
-            return;
-        }
+        $this->requirePermission('user_management');
+        
         $userModel = new UserModel();
         $users = $userModel->getAllUsers();
         $this->render('users/index', ['users' => $users, 'user' => $this->auth->getCurrentUser()]);
@@ -19,12 +14,8 @@ class UserManagementController extends Controller {
 
     public function assistants() {
         $this->requireAuth();
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') {
-            http_response_code(403);
-            echo json_encode(['error' => 'Forbidden']);
-            return;
-        }
+        $this->requirePermission('user_management');
+        
         $userModel = new UserModel();
         $assistants = $userModel->getUsersByRole('user');
         $this->render('users/assistants', ['users' => $assistants, 'user' => $this->auth->getCurrentUser()]);
@@ -32,15 +23,15 @@ class UserManagementController extends Controller {
 
     public function create() {
         $this->requireAuth();
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') { $this->jsonResponse(['error' => 'Forbidden'], 403); }
+        $this->requirePermission('user_management');
+        
         $this->render('users/form', ['mode' => 'create', 'user' => $this->auth->getCurrentUser()]);
     }
 
     public function edit($id) {
         $this->requireAuth();
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') { $this->jsonResponse(['error' => 'Forbidden'], 403); }
+        $this->requirePermission('user_management');
+        
         $userModel = new UserModel();
         $record = $userModel->getUserById((int)$id);
         $this->render('users/form', ['mode' => 'edit', 'record' => $record, 'user' => $this->auth->getCurrentUser()]);
@@ -48,8 +39,8 @@ class UserManagementController extends Controller {
 
     public function store() {
         $this->requireAuth();
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') { $this->jsonResponse(['error' => 'Forbidden'], 403); }
+        $this->requirePermission('user_management');
+        
         $data = $this->getRequestData();
         try {
             $userModel = new UserModel();
@@ -73,8 +64,8 @@ class UserManagementController extends Controller {
 
     public function update($id) {
         $this->requireAuth();
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') { $this->jsonResponse(['error' => 'Forbidden'], 403); }
+        $this->requirePermission('user_management');
+        
         $data = $this->getRequestData();
         try {
             $userModel = new UserModel();
@@ -98,8 +89,8 @@ class UserManagementController extends Controller {
 
     public function destroy($id) {
         $this->requireAuth();
-        $current = $this->auth->getCurrentUser();
-        if (!$current || ($current['role'] ?? 'user') === 'user') { $this->jsonResponse(['error' => 'Forbidden'], 403); }
+        $this->requirePermission('user_management');
+        
         try {
             $userModel = new UserModel();
             $ok = $userModel->deleteUser((int)$id);

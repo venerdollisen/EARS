@@ -16,6 +16,7 @@ class AuditTrailController extends Controller {
      */
     public function index() {
         $this->requireAuth();
+        $this->requirePermission('audit_trail');
         
         $this->render('audit-trail/index', [
             'user' => $this->auth->getCurrentUser()
@@ -27,6 +28,7 @@ class AuditTrailController extends Controller {
      */
     public function getAuditTrail() {
         $this->requireAuth();
+        $this->requirePermission('audit_trail');
         
         try {
             $filters = [
@@ -46,10 +48,14 @@ class AuditTrailController extends Controller {
             });
             
             $data = $this->auditTrailModel->getAuditTrail($filters);
+            $totalCount = $this->auditTrailModel->getAuditTrailCount($filters);
             
             echo json_encode([
                 'success' => true,
-                'data' => $data
+                'data' => $data,
+                'total_count' => $totalCount,
+                'current_page' => isset($_GET['offset']) ? (int)($_GET['offset'] / $_GET['limit']) + 1 : 1,
+                'items_per_page' => (int)($_GET['limit'] ?? 100)
             ]);
             
         } catch (Exception $e) {
@@ -65,6 +71,7 @@ class AuditTrailController extends Controller {
      */
     public function getStats() {
         $this->requireAuth();
+        $this->requirePermission('audit_trail');
         
         try {
             $stats = $this->auditTrailModel->getAuditStats();
@@ -87,6 +94,7 @@ class AuditTrailController extends Controller {
      */
     public function getRecordAuditTrail($tableName, $recordId) {
         $this->requireAuth();
+        $this->requirePermission('audit_trail');
         
         try {
             $data = $this->auditTrailModel->getRecordAuditTrail($tableName, $recordId);
@@ -109,6 +117,7 @@ class AuditTrailController extends Controller {
      */
     public function export() {
         $this->requireAuth();
+        $this->requirePermission('audit_trail');
         
         try {
             $filters = [

@@ -16,6 +16,7 @@ class SettingsController extends Controller {
     
     public function profile() {
         $this->requireAuth();
+        // Profile settings are available to all users
         
         $currentUser = $this->auth->getCurrentUser();
         
@@ -32,6 +33,7 @@ class SettingsController extends Controller {
     
     public function general() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
         
         $parametersModel = new AccountingParametersModel();
         $parameters = $parametersModel->getParameters();
@@ -44,6 +46,7 @@ class SettingsController extends Controller {
     
     public function security() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
         
         $parametersModel = new AccountingParametersModel();
         $parameters = $parametersModel->getParameters();
@@ -56,6 +59,7 @@ class SettingsController extends Controller {
     
     public function backup() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
         
         $parametersModel = new AccountingParametersModel();
         $parameters = $parametersModel->getParameters();
@@ -68,6 +72,7 @@ class SettingsController extends Controller {
     
     public function notifications() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
         
         $parametersModel = new AccountingParametersModel();
         $parameters = $parametersModel->getParameters();
@@ -80,6 +85,8 @@ class SettingsController extends Controller {
     
     public function saveProfile() {
         $this->requireAuth();
+        // Profile updates are available to all users
+        
         $data = $this->getRequestData();
         
         if (!isset($data['profile'])) {
@@ -176,6 +183,8 @@ class SettingsController extends Controller {
     
     public function saveGeneral() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
+        
         $data = $this->getRequestData();
         
         if (!isset($data['settings'])) {
@@ -209,6 +218,8 @@ class SettingsController extends Controller {
     
     public function saveSecurity() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
+        
         $data = $this->getRequestData();
         
         if (!isset($data['settings'])) {
@@ -242,6 +253,8 @@ class SettingsController extends Controller {
     
     public function saveBackup() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
+        
         $data = $this->getRequestData();
         
         if (!isset($data['settings'])) {
@@ -275,6 +288,8 @@ class SettingsController extends Controller {
     
     public function saveNotifications() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
+        
         $data = $this->getRequestData();
         
         if (!isset($data['settings'])) {
@@ -308,6 +323,7 @@ class SettingsController extends Controller {
     
     public function createBackup() {
         $this->requireAuth();
+        $this->requirePermission('system_settings');
         
         try {
             // Create backup directory if it doesn't exist

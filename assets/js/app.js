@@ -267,6 +267,18 @@ $(document).ready(function() {
                         EARS.showAlert(response?.error || 'Failed to delete record', 'danger');
                     });
             });
+        },
+
+        // Style required field asterisks
+        styleRequiredFields: function() {
+            $('.form-label').each(function() {
+                const $label = $(this);
+                const text = $label.html();
+                if (text && text.includes('*')) {
+                    const newText = text.replace(/\*/g, '<span class="asterisk">*</span>');
+                    $label.html(newText);
+                }
+            });
         }
     };
 
@@ -332,4 +344,5 @@ $(document).ready(function() {
     // Initialize common components
     EARS.initSelect2('.select2');
     EARS.initDatePicker('.datepicker');
+    EARS.styleRequiredFields();
 }); 

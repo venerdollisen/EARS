@@ -1,3 +1,9 @@
+<?php
+// Ensure $user variable is always defined
+if (!isset($user)) {
+    $user = [];
+}
+?>
 <nav class="sidebar">
     <div class="sidebar-header">
         <h3 class="sidebar-brand">
@@ -14,6 +20,7 @@
             </a>
         </li>
         
+        <?php if (hasPermission($user, 'parameters')): ?>
         <li class="nav-item">
             <a href="#parametersSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/parameters') !== false ? 'active' : '' ?>">
                 <i class="bi bi-gear"></i>
@@ -29,7 +36,9 @@
                 </li>
             </ul>
         </li>
+        <?php endif; ?>
 
+        <?php if (hasPermission($user, 'file_maintenance')): ?>
         <li class="nav-item">
             <a href="#fileMaintenanceSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/file-maintenance') !== false ? 'active' : '' ?>">
                 <i class="bi bi-folder"></i>
@@ -76,7 +85,9 @@
                 </li>
             </ul>
         </li>
+        <?php endif; ?>
         
+        <?php if (hasPermission($user, 'transaction_entries')): ?>
         <li class="nav-item">
             <a href="#transactionSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/transaction-entries') !== false ? 'active' : '' ?>">
                 <i class="bi bi-journal-text"></i>
@@ -110,8 +121,9 @@
                 </li>
             </ul>
         </li>
+        <?php endif; ?>
 
-        <?php if (($user['role'] ?? '') !== 'user'): ?>
+        <?php if (hasPermission($user, 'user_management')): ?>
         <li class="nav-item">
             <a href="<?=APP_URL?>/users" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/users') !== false ? 'active' : '' ?>">
                 <i class="bi bi-people"></i>
@@ -120,26 +132,32 @@
         </li>
         <?php endif; ?>
 
+        <?php if (hasPermission($user, 'summary')): ?>
         <li class="nav-item">
             <a href="<?=APP_URL?>/summary" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/summary') !== false ? 'active' : '' ?>">
                 <i class="bi bi-graph-up"></i>
                 <span>Summary</span>
             </a>
         </li>
+        <?php endif; ?>
 
-        <li class="nav-item">
+        <?php if (hasPermission($user, 'reports')): ?>
+        <li class="nav-item" style="display: none;">
             <a href="<?=APP_URL?>/reports" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/reports') !== false ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>
             </a>
         </li>
+        <?php endif; ?>
 
+        <?php if (hasPermission($user, 'audit_trail')): ?>
         <li class="nav-item">
             <a href="<?=APP_URL?>/audit-trail" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/audit-trail') !== false ? 'active' : '' ?>">
                 <i class="bi bi-shield-check"></i>
                 <span>Audit Trail</span>
             </a>
         </li>
+        <?php endif; ?>
 
         <li class="nav-item">
             <a href="#settingsSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/settings') !== false ? 'active' : '' ?>">
@@ -154,6 +172,7 @@
                         <span>Profile</span>
                     </a>
                 </li>
+                <?php if (hasPermission($user, 'system_settings')): ?>
                 <li class="nav-item">
                     <a href="<?=APP_URL?>/settings/general" class="nav-link">
                         <i class="bi bi-circle"></i>
@@ -178,6 +197,7 @@
                         <span>Notifications</span>
                     </a>
                 </li> -->
+                <?php endif; ?>
             </ul>
         </li>
     </ul>

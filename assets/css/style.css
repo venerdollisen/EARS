@@ -389,4 +389,16 @@ body {
     .main-content {
         margin-left: 0 !important;
     }
+}
+
+/* Make only asterisks red */
+.form-label {
+    color: inherit !important;
+}
+
+/* Style for asterisks in required field labels */
+.form-label .asterisk,
+.form-label .required-mark {
+    color: var(--danger-color) !important;
+    font-weight: bold;
 } 

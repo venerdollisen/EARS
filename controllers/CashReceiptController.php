@@ -6,6 +6,7 @@ require_once 'models/ChartOfAccountsModel.php';
 require_once 'models/SupplierModel.php';
 require_once 'models/ProjectModel.php';
 require_once 'models/DepartmentModel.php';
+require_once 'models/NotificationModel.php';
 require_once 'core/AuditTrailTrait.php';
 
 class CashReceiptController extends Controller {
@@ -15,6 +16,7 @@ class CashReceiptController extends Controller {
     private $supplierModel;
     private $projectModel;
     private $departmentModel;
+    private $notificationModel;
     
     public function __construct() {
         parent::__construct();
@@ -23,6 +25,7 @@ class CashReceiptController extends Controller {
         $this->supplierModel = new SupplierModel();
         $this->projectModel = new ProjectModel();
         $this->departmentModel = new DepartmentModel();
+        $this->notificationModel = new NotificationModel();
     }
     
     /**
@@ -118,6 +121,15 @@ class CashReceiptController extends Controller {
                 return;
             }
             
+            // Enforce default Pending statuses for assistants/users
+            try {
+                $currentUser = $this->auth->getCurrentUser();
+                $creatorRole = $currentUser['role'] ?? 'user';
+                if (in_array($creatorRole, ['user','assistant'])) {
+                    $data['payment_status'] = 'Pending';
+                }
+            } catch (Exception $e) {}
+            
             // Prepare transaction data
             $transactionData = [
                 'reference_no' => $data['reference_no'],
@@ -131,6 +143,7 @@ class CashReceiptController extends Controller {
                 'billing_number' => $data['billing_number'] ?? null,
                 'project_id' => $data['project_id'] ?? null,
                 'department_id' => $data['department_id'] ?? null,
+                'check_payment_status' => $data['payment_status'] ?? 'Pending',
                 'created_by' => $this->auth->getCurrentUser()['id']
             ];
             
@@ -140,6 +153,24 @@ class CashReceiptController extends Controller {
             if ($result['success']) {
                 // Log audit trail
                 $this->logCreate('transactions', $result['transaction_id'], $transactionData);
+                
+                // Notifications for admins/managers/accountants when created by assistant/user
+                try {
+                    $currentUser = $this->auth->getCurrentUser();
+                    $creatorRole = $currentUser['role'] ?? 'user';
+                    if (in_array($creatorRole, ['user', 'assistant'])) {
+                        $receipt = $data['reference_no'] ?? 'CR';
+                        $title = 'Cash Receipt Pending Approval';
+                        $msg = sprintf('A cash receipt (CR: %s) was created by %s and is pending review.', $receipt, $currentUser['full_name'] ?? $currentUser['username'] ?? 'User');
+                        $link = APP_URL . '/transaction-entries/cash-receipt?id=' . urlencode((string)$result['transaction_id']);
+                        $recipients = $this->db->query("SELECT id FROM users WHERE role IN ('admin','manager','accountant') AND status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($recipients as $r) {
+                            $this->notificationModel->createNotification((int)$r['id'], $title, $msg, $link);
+                        }
+                    }
+                } catch (Exception $notifyEx) {
+                    error_log('Notification error (cash receipt save): ' . $notifyEx->getMessage());
+                }
                 
                 echo json_encode([
                     'success' => true,
@@ -198,18 +229,65 @@ class CashReceiptController extends Controller {
             $data = $_POST;
             
             // Validate required fields
-            if (empty($data['reference_no']) || empty($data['amount']) || empty($data['accounts'])) {
-                throw new Exception('Missing required fields');
+            if (empty($data['reference_no'])) {
+                throw new Exception('Reference number is required');
+            }
+            if (empty($data['transaction_date'])) {
+                throw new Exception('Transaction date is required');
             }
             
-            // Update cash receipt
-            $result = $this->cashReceiptModel->updateCashReceipt($id, $data);
+            // Check if user has permission to update status
+            $currentUser = $this->auth->getCurrentUser();
+            $userRole = $currentUser['role'] ?? 'user';
             
-            echo json_encode([
-                'success' => true,
-                'message' => 'Cash receipt updated successfully',
-                'data' => $result
-            ]);
+            // Only admins, managers, and accountants can update status
+            if (!in_array($userRole, ['admin', 'manager', 'accountant'])) {
+                throw new Exception('Insufficient permissions to update transaction status');
+            }
+            
+            // Prepare update data
+            $updateData = [
+                'reference_no' => $data['reference_no'],
+                'transaction_date' => $data['transaction_date'],
+                'check_payment_status' => $data['payment_status'] ?? 'Pending',
+                'updated_by' => $currentUser['id'],
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Update the transaction
+            $result = $this->cashReceiptModel->updateCashReceipt($id, $updateData);
+            
+            if ($result) {
+                // Log audit trail
+                $this->logUpdate('transactions', $id, $updateData);
+                
+                // Send notification to creator if status changed
+                $originalTransaction = $this->cashReceiptModel->getCashReceiptById($id);
+                if ($originalTransaction && $originalTransaction['created_by'] != $currentUser['id']) {
+                    $statusChanged = false;
+                    if (($data['payment_status'] ?? '') !== ($originalTransaction['check_payment_status'] ?? '')) {
+                        $statusChanged = true;
+                    }
+                    
+                    if ($statusChanged) {
+                        $title = 'Cash Receipt Status Updated';
+                        $msg = sprintf('Your cash receipt (CR: %s) status has been updated by %s.', 
+                                     $data['reference_no'], $currentUser['full_name'] ?? $currentUser['username']);
+                        $link = APP_URL . '/transaction-entries/cash-receipt?id=' . urlencode((string)$id);
+                        $this->notificationModel->createNotification($originalTransaction['created_by'], $title, $msg, $link);
+                    }
+                }
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Cash receipt updated successfully'
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Failed to update cash receipt'
+                ]);
+            }
             
         } catch (Exception $e) {
             echo json_encode([
