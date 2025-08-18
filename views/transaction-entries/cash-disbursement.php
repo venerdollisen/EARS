@@ -102,38 +102,18 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="check_payment_status" class="form-label">Payment Status</label>
-                                <select class="form-select" id="check_payment_status" name="check_payment_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Approved">Approved</option>
-                                    <option value="Rejected">Rejected</option>
-                                    <option value="On Hold">On Hold</option>
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" <?= $isStatusLocked ? 'disabled' : '' ?> >
+                                    <option value="pending" selected>Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-3" style="display: none;">
-                            <div class="mb-3">
-                                <label for="cv_status" class="form-label">CV Status</label>
-                                <select class="form-select" id="cv_status" name="cv_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Approved">Approved</option>
-                                    <option value="Rejected">Rejected</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3" style="display: none;">
-                            <div class="mb-3">
-                                <label for="cv_checked" class="form-label">CV Checked</label>
-                                <select class="form-select" id="cv_checked" name="cv_checked" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Checked">Checked</option>
-                                    <option value="Unchecked">Unchecked</option>
-                                </select>
-                            </div>
-                        </div>
+
                         
                         <div class="col-md-3" style="display: none;">
                             <div class="mb-3">
@@ -200,7 +180,7 @@
                 </div>
                 <div class="card-body">
                     <!-- Filters -->
-                    <div class="row mb-3 g-3 align-items-end">
+                    <div class="row mb-3 g-3 align-items-end" style="display: none;">
                         <div class="col-md-3">
                             <label for="cdFilterDate" class="form-label">Date Range</label>
                             <input type="date" class="form-control" id="cdFilterDate" placeholder="Filter by date">
@@ -593,9 +573,8 @@ function saveTransaction() {
         cwo_number: formData.get('cwo_number'),
         ebr_number: formData.get('ebr_number'),
         particulars: formData.get('particulars'),
-        cv_status: formData.get('cv_status'),
-        cv_checked: formData.get('cv_checked'),
-        check_payment_status: formData.get('check_payment_status'),
+
+                        status: formData.get('status'),
         return_reason: formData.get('return_reason'),
         account_distribution: []
     };
@@ -636,7 +615,14 @@ function saveTransaction() {
                 document.getElementById('accountTableBody').innerHTML = '';
                 addAccountRow();
                 calculateTotals();
-                loadRecentTransactions();
+                
+                // Refresh the DataTable to show the new transaction
+                setTimeout(function(){ 
+                    console.log('Refreshing DataTable after successful save...'); // Debug log
+                    if (cdTransactionsTable) {
+                        cdTransactionsTable.ajax.reload();
+                    }
+                }, 1000);
                 
                 // Update status (only if elements exist)
                 const statusEl = document.getElementById('transactionStatus');
@@ -652,7 +638,12 @@ function saveTransaction() {
                     createdByEl.textContent = 'Current User';
                 }
             } else {
-                EARS.showAlert(response.error || 'Failed to save transaction', 'danger');
+                if(response.warning){
+                EARS.showAlert(response.message, 'danger');
+            }else{
+                EARS.showAlert(response?.error || 'Failedc to save transaction', 'danger');
+            }
+
             }
         },
         error: function(xhr) {
@@ -729,21 +720,20 @@ function loadRecentTransactions() {
                     const amt = (t.amount != null ? t.amount : (t.total_amount != null ? t.total_amount : 0));
                     const dateStr = t.transaction_date ? new Date(t.transaction_date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' }) : '-';
                     
-                    // Determine status badge class based on check_payment_status
+                    // Determine status badge class based on payment_status
                     let statusClass = 'bg-secondary';
-                    let status = t.check_payment_status || 'Pending';
+                    let status = t.status || 'pending';
                     
                     switch (status) {
-                        case 'Approved':
+                        case 'approved':
                             statusClass = 'bg-success';
                             break;
-                        case 'Rejected':
+                        case 'rejected':
                             statusClass = 'bg-danger';
                             break;
-                        case 'On Hold':
+                        case 'pending':
                             statusClass = 'bg-warning';
                             break;
-                        case 'Pending':
                         default:
                             statusClass = 'bg-secondary';
                             break;
@@ -793,25 +783,85 @@ function loadRecentTransactions() {
 let cdTransactionsTable;
 
 function initializeCDTransactionsTable() {
+    console.log('Initializing server-side DataTable for cash disbursement...'); // Debug log
+    
+    // Check if DataTable is available
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTable library not loaded!');
+        return;
+    }
+    
+    // Check if table exists
     const table = $('#cdTransactionsTable');
-    if (table.length === 0) return;
+    if (table.length === 0) {
+        console.log('Table not found'); // Debug log
+        return;
+    }
+
+    // If DataTable is already initialized, destroy it to avoid duplicates
     if ($.fn.DataTable.isDataTable('#cdTransactionsTable')) {
-        try { $('#cdTransactionsTable').DataTable().destroy(); } catch (e) {}
+        try {
+            $('#cdTransactionsTable').DataTable().destroy();
+            console.log('Destroyed existing DataTable'); // Debug log
+        } catch (error) {
+            console.log('Error destroying DataTable:', error); // Debug log
+        }
     }
-    // Clear any global DataTables search filters that may be lingering from other pages
-    if ($.fn.dataTable && $.fn.dataTable.ext && $.fn.dataTable.ext.search) {
-        $.fn.dataTable.ext.search = [];
+    
+    // Initialize server-side DataTable
+    try {
+        console.log('Initializing DataTable with server-side processing...');
+        cdTransactionsTable = $('#cdTransactionsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: APP_URL + '/api/cash-disbursement/datatable',
+                type: 'GET',
+                data: function(d) {
+                    // Add user role to the request
+                    d.userRole = '<?= $user['role'] ?? 'user' ?>';
+                    console.log('DataTable request data:', d);
+                    return d;
+                },
+                dataSrc: function(json) {
+                    console.log('DataTable response:', json);
+                    if (json.data) {
+                        return json.data;
+                    }
+                    return [];
+                },
+                error: function(xhr, error, thrown) {
+                    console.error('DataTable AJAX error:', error);
+                    console.error('Response:', xhr.responseText);
+                    console.error('Status:', xhr.status);
+                }
+            },
+            columns: [
+                { data: 0 }, // Date
+                { data: 1 }, // Cash Voucher Number
+                { data: 2 }, // Total Amount
+                { data: 3 }, // Particulars
+                { data: 4 }, // Payee
+                { data: 5 }, // Status
+                { data: 6 }  // Action
+            ],
+            order: [[0, 'desc']], // Sort by date descending by default
+            pageLength: 10,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'csv', 'excel', 'pdf', 'print'
+            ],
+            drawCallback: function(settings) {
+                // Re-attach event handlers after DataTable redraw
+                attachCDTransactionEventHandlers();
+            }
+        });
+        console.log('Server-side DataTable initialized successfully'); // Debug log
+    } catch (error) {
+        console.error('Error initializing DataTable:', error);
+        // Fallback: ensure table is visible even without DataTable
+        table.show();
     }
-    cdTransactionsTable = $('#cdTransactionsTable').DataTable({
-        pageLength: 10,
-        order: [[0, 'desc']],
-        columnDefs: [
-            { targets: 2, type: 'num-fmt', className: 'text-end' },
-            { targets: -1, orderable: false, searchable: false }
-        ],
-        // Use standard layout to avoid DOM rendering issues
-        dom: 'lfrtip'
-    });
 }
 
 function initializeCDFilters() {
@@ -821,40 +871,24 @@ function initializeCDFilters() {
 }
 
 function filterCDTransactions() {
-    const dateFilter = $('#cdFilterDate').val();
-    const refFilter = ($('#cdFilterReference').val() || '').toLowerCase();
-    const pfFilter = ($('#cdFilterPaymentForm').val() || '').toLowerCase();
-
-    // Remove existing custom filtering
-    $.fn.dataTable.ext.search = $.fn.dataTable.ext.search || [];
-    $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(() => false);
-
-    $.fn.dataTable.ext.search.push(function(settings, data) {
-        if (settings.nTable.id !== 'cdTransactionsTable') return true;
-        const rowDate = data[0];
-        const rowRef = (data[1] || '').toLowerCase();
-        const rowPF = (data[4] || '').toLowerCase();
-
-        if (dateFilter) {
-            const rowDateObj = new Date(rowDate);
-            const filterDateObj = new Date(dateFilter);
-            if (rowDateObj.toDateString() !== filterDateObj.toDateString()) return false;
-        }
-        if (refFilter && !rowRef.includes(refFilter)) return false;
-        if (pfFilter && rowPF !== pfFilter) return false;
-        return true;
-    });
-    if (cdTransactionsTable) cdTransactionsTable.draw();
+    // For server-side DataTable, we need to implement custom filtering
+    // This will be handled by the server-side processing
+    // For now, we'll just reload the table with current filters
+    if (cdTransactionsTable) {
+        cdTransactionsTable.ajax.reload();
+    }
 }
 
 function clearCDFilters() {
     $('#cdFilterDate').val('');
     $('#cdFilterReference').val('');
     $('#cdFilterPaymentForm').val('');
-    // Clear search filters
-    $.fn.dataTable.ext.search = $.fn.dataTable.ext.search || [];
-    $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(() => false);
-    if (cdTransactionsTable) { cdTransactionsTable.search(''); cdTransactionsTable.draw(); }
+    
+    // Clear DataTable search and reload
+    if (cdTransactionsTable) { 
+        cdTransactionsTable.search(''); 
+        cdTransactionsTable.draw(); 
+    }
 }
 
 // View transaction details for Cash Disbursement
@@ -887,8 +921,38 @@ function viewCDTransactionDetails(transactionId) {
     });
 }
 
+function deleteCDTransaction(id, reference) {
+    if (!confirm('Are you sure you want to delete cash disbursement ' + reference + '? This action cannot be undone.')) {
+        return;
+    }
+    
+    $.ajax({
+        url: APP_URL + '/api/cash-disbursement/delete/' + id,
+        method: 'POST',
+        dataType: 'json',
+        success: function(resp) {
+            if (resp && resp.success) {
+                EARS.showAlert(resp.message || 'Cash disbursement deleted successfully!', 'success');
+                // Refresh the DataTable
+                if (cdTransactionsTable) {
+                    cdTransactionsTable.ajax.reload();
+                }
+            } else {
+                EARS.showAlert(resp.message || 'Failed to delete cash disbursement', 'danger');
+            }
+        },
+        error: function(xhr) {
+            const r = xhr.responseJSON;
+            EARS.showAlert(r?.message || 'Failed to delete cash disbursement', 'danger');
+        }
+    });
+}
+
 // Render a full details view similar to cash receipt, with distribution breakdown
 function displayCDTransactionDetails(transaction) {
+    // Check if this is using the new structure (has distributions)
+    const hasNewStructure = transaction.distributions && Array.isArray(transaction.distributions);
+    
     const modalContent = `
         <div class="row">
             <div class="col-md-6">
@@ -928,7 +992,7 @@ function displayCDTransactionDetails(transaction) {
                     </tr>
                     <tr>
                         <td><strong>Total Amount:</strong></td>
-                        <td class="fw-bold">₱${parseFloat(transaction.amount || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                        <td class="fw-bold">₱${parseFloat(transaction.total_amount || transaction.amount || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
                     </tr>
                 </table>
             </div>
@@ -947,13 +1011,13 @@ function displayCDTransactionDetails(transaction) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${generateCDAccountRows(transaction.child_transactions || [])}
+                            ${hasNewStructure ? generateCDAccountRows(transaction.distributions) : generateCDAccountRows(transaction.child_transactions || [])}
                         </tbody>
                         <tfoot>
                             <tr class="table-info">
                                 <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
-                                <td class="text-end"><strong>₱${calculateCDTotalDebit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
-                                <td class="text-end"><strong>₱${calculateCDTotalCredit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                                <td class="text-end"><strong>₱${hasNewStructure ? calculateCDTotalDebit(transaction.distributions).toLocaleString('en-PH', {minimumFractionDigits: 2}) : calculateCDTotalDebit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                                <td class="text-end"><strong>₱${hasNewStructure ? calculateCDTotalCredit(transaction.distributions).toLocaleString('en-PH', {minimumFractionDigits: 2}) : calculateCDTotalCredit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -964,62 +1028,45 @@ function displayCDTransactionDetails(transaction) {
     $('#transactionDetails').html(modalContent);
 }
 
-function generateCDAccountRows(childTransactions) {
-    if (!childTransactions || childTransactions.length === 0) {
+function generateCDAccountRows(distributions) {
+    if (!distributions || distributions.length === 0) {
         return `
             <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="6" class="text-center text-muted">
                     <i class="bi bi-info-circle me-2"></i>
-                    This transaction was created before the enhanced account distribution system was implemented.
-                    <br><small class="text-muted">New transactions will show detailed account distribution.</small>
+                    No account distributions found.
                 </td>
             </tr>
         `;
     }
 
-    return childTransactions.map(t => {
-        let type = t.transaction_type;
-        if (!type || type === '') {
-            if (t.reference_no && t.reference_no.includes('-D')) type = 'debit';
-            else if (t.reference_no && t.reference_no.includes('-C')) type = 'credit';
-        }
-        const debitCol = type === 'debit' ? '₱' + parseFloat(t.amount).toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-';
-        const creditCol = type === 'credit' ? '₱' + parseFloat(t.amount).toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-';
+    return distributions.map(distribution => {
+        const amount = parseFloat(distribution.amount || 0);
+        const paymentType = distribution.payment_type || 'debit';
+        
         return `
             <tr>
-                <td>${t.account_name || 'N/A'}</td>
-                <td>${t.project_name || '-'}</td>
-                <td>${t.department_name || '-'}</td>
-                <td>${t.supplier_name || '-'}</td>
-                <td class="text-end">${debitCol}</td>
-                <td class="text-end">${creditCol}</td>
+                <td>${distribution.account_name || 'N/A'}</td>
+                <td>${distribution.project_name || '-'}</td>
+                <td>${distribution.department_name || '-'}</td>
+                <td>${distribution.supplier_name || '-'}</td>
+                <td class="text-end">${paymentType === 'debit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+                <td class="text-end">${paymentType === 'credit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
             </tr>
         `;
     }).join('');
 }
 
-function calculateCDTotalDebit(childTransactions) {
-    return (childTransactions || [])
-        .filter(t => {
-            let type = t.transaction_type;
-            if (!type || type === '') {
-                if (t.reference_no && t.reference_no.includes('-D')) type = 'debit';
-            }
-            return type === 'debit';
-        })
-        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+function calculateCDTotalDebit(distributions) {
+    return (distributions || [])
+        .filter(d => d.payment_type === 'debit')
+        .reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
 }
 
-function calculateCDTotalCredit(childTransactions) {
-    return (childTransactions || [])
-        .filter(t => {
-            let type = t.transaction_type;
-            if (!type || type === '') {
-                if (t.reference_no && t.reference_no.includes('-C')) type = 'credit';
-            }
-            return type === 'credit';
-        })
-        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+function calculateCDTotalCredit(distributions) {
+    return (distributions || [])
+        .filter(d => d.payment_type === 'credit')
+        .reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
 }
 
 // Print the currently displayed cash disbursement details
@@ -1132,5 +1179,96 @@ $(document).ready(function() {
 // Clear draft when form is successfully saved
 function clearDraft() {
     localStorage.removeItem('cash_disbursement_draft');
+}
+
+// Add custom styles for the account distribution table and DataTable
+$(document).ready(function() {
+    // Add custom CSS for better table display
+    $('<style>')
+        .prop('type', 'text/css')
+        .html(`
+            #accountTable {
+                font-size: 0.9rem;
+            }
+            
+            #accountTable th,
+            #accountTable td {
+                padding: 0.5rem;
+                vertical-align: middle;
+            }
+            
+            #accountTable .form-select,
+            #accountTable .form-control {
+                font-size: 0.85rem;
+                padding: 0.375rem 0.5rem;
+            }
+            
+            #accountTable .form-select option {
+                font-size: 0.85rem;
+            }
+            
+            @media (max-width: 1200px) {
+                .table-responsive {
+                    overflow-x: auto;
+                }
+                
+                #accountTable {
+                    min-width: 800px;
+                }
+            }
+            
+            #accountTable .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+            
+            /* DataTable alignment fixes */
+            .dataTables_wrapper .row {
+                margin: 0;
+                align-items: center;
+            }
+            
+            .dataTables_wrapper .col-sm-6 {
+                padding: 0.5rem 0;
+            }
+            
+            .dataTables_length {
+                margin-bottom: 0;
+            }
+            
+            .dataTables_filter {
+                margin-bottom: 0;
+                text-align: right;
+            }
+            
+            .dataTables_filter input {
+                margin-left: 0.5rem;
+            }
+            
+            .dataTables_info {
+                padding-top: 0.5rem;
+            }
+            
+            .dataTables_paginate {
+                padding-top: 0.5rem;
+            }
+        `)
+        .appendTo('head');
+});
+
+// Function to attach event handlers for DataTable
+function attachCDTransactionEventHandlers() {
+    // Re-attach click handlers for dynamically added View buttons
+    $('#cdTransactionsTable tbody').off('click', '.cd-view-transaction-btn').on('click', '.cd-view-transaction-btn', function() {
+        const transactionId = $(this).data('transaction-id');
+        viewCDTransactionDetails(transactionId);
+    });
+    
+    // Re-attach click handlers for delete buttons
+    $('#cdTransactionsTable tbody').off('click', '.cd-delete-transaction-btn').on('click', '.cd-delete-transaction-btn', function() {
+        const transactionId = $(this).data('transaction-id');
+        const reference = $(this).data('reference');
+        deleteCDTransaction(transactionId, reference);
+    });
 }
 </script> 

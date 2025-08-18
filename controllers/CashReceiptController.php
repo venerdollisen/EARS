@@ -7,6 +7,7 @@ require_once 'models/SupplierModel.php';
 require_once 'models/ProjectModel.php';
 require_once 'models/DepartmentModel.php';
 require_once 'models/NotificationModel.php';
+require_once 'models/TransactionValidationModel.php';
 require_once 'core/AuditTrailTrait.php';
 
 class CashReceiptController extends Controller {
@@ -17,6 +18,7 @@ class CashReceiptController extends Controller {
     private $projectModel;
     private $departmentModel;
     private $notificationModel;
+    private $validationModel;
     
     public function __construct() {
         parent::__construct();
@@ -26,6 +28,7 @@ class CashReceiptController extends Controller {
         $this->projectModel = new ProjectModel();
         $this->departmentModel = new DepartmentModel();
         $this->notificationModel = new NotificationModel();
+        $this->validationModel = new TransactionValidationModel($this->db);
     }
     
     /**
@@ -37,9 +40,6 @@ class CashReceiptController extends Controller {
         // Get accounts for dropdown (including inactive ones for now)
         $accounts = $this->chartOfAccountsModel->getAllAccountsIncludingInactive();
         
-        // Debug: Log the accounts being loaded (commented out to prevent output issues)
-        // error_log('Accounts loaded for cash receipt form: ' . json_encode($accounts));
-        
         // Get suppliers for subsidiary accounts
         $suppliers = $this->supplierModel->getAllSuppliers();
         
@@ -47,7 +47,7 @@ class CashReceiptController extends Controller {
         $projects = $this->projectModel->getActiveProjects();
         $departments = $this->departmentModel->getActiveDepartments();
         
-        // Get recent cash receipts
+        // Get recent cash receipts using the new structure
         $transactions = $this->cashReceiptModel->getRecentCashReceipts();
         
         $this->render('transaction-entries/cash-receipt', [
@@ -61,17 +61,13 @@ class CashReceiptController extends Controller {
     }
     
     /**
-     * Save cash receipt transaction
+     * Save cash receipt transaction using new normalized structure
      */
     public function save() {
         $this->requireAuth();
         
         try {
             $data = json_decode(file_get_contents('php://input'), true);
-            // var_dump($data);
-            // die();
-            // Debug: Log the received data (commented out to prevent output issues)
-            // error_log('Cash receipt save data received: ' . json_encode($data));
             
             // Validate required fields
             $requiredFields = ['reference_no', 'transaction_date', 'amount', 'payment_form', 'payment_description'];
@@ -121,38 +117,127 @@ class CashReceiptController extends Controller {
                 return;
             }
             
-            // Enforce default Pending statuses for assistants/users
+            // Prepare distributions for accounting validation
+            $validationDistributions = [];
+            foreach ($data['account_distribution'] as $distribution) {
+                if (empty($distribution['account_id'])) {
+                    continue;
+                }
+                
+                // Handle debit entries
+                if (!empty($distribution['debit']) && floatval($distribution['debit']) > 0) {
+                    $validationDistributions[] = [
+                        'account_id' => intval($distribution['account_id']),
+                        'payment_type' => 'debit',
+                        'amount' => floatval($distribution['debit'])
+                    ];
+                }
+                
+                // Handle credit entries
+                if (!empty($distribution['credit']) && floatval($distribution['credit']) > 0) {
+                    $validationDistributions[] = [
+                        'account_id' => intval($distribution['account_id']),
+                        'payment_type' => 'credit',
+                        'amount' => floatval($distribution['credit'])
+                    ];
+                }
+            }
+            
+            // Validate using accounting principles
+            $validationResult = $this->validationModel->validateTransactionDistributions($validationDistributions);
+            if (!$validationResult['valid']) {
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Accounting validation failed',
+                    'message' => 'Accounting validation errors: ' . implode(', ', $validationResult['errors'])
+                ]);
+                return;
+            }
+            
+            // Show warnings if any (but allow transaction to proceed)
+            if (!empty($validationResult['warnings'])) {
+                echo json_encode([
+                    'success' => false,
+                    'warning' => 'Transaction has warnings but is valid',
+                    'message' => 'Please review the warnings: ' . implode(', ', $validationResult['warnings'])
+                ]);
+                return;
+            }
+            
+            // Enforce default status for assistants/users
             try {
                 $currentUser = $this->auth->getCurrentUser();
                 $creatorRole = $currentUser['role'] ?? 'user';
                 if (in_array($creatorRole, ['user','assistant'])) {
-                    $data['payment_status'] = 'Pending';
+                    $data['status'] = 'pending';
                 }
             } catch (Exception $e) {}
             
-            // Prepare transaction data
-            $transactionData = [
+            // Calculate total amount - for cash receipts, total is sum of all amounts
+            $totalAmount = $totalDebit + $totalCredit;
+            
+            // Prepare header data for new structure
+            $headerData = [
                 'reference_no' => $data['reference_no'],
                 'transaction_date' => $data['transaction_date'],
-                'amount' => $data['amount'],
-                'transaction_type' => 'cash_receipt',
-                'payment_form' => $data['payment_form'],
+                'total_amount' => $totalAmount,
                 'description' => $data['payment_description'],
+                'payment_form' => $data['payment_form'],
                 'check_number' => $data['check_number'] ?? null,
                 'bank' => $data['bank'] ?? null,
                 'billing_number' => $data['billing_number'] ?? null,
-                'project_id' => $data['project_id'] ?? null,
-                'department_id' => $data['department_id'] ?? null,
-                'check_payment_status' => $data['payment_status'] ?? 'Pending',
+                'payee_name' => null, // Cash receipts don't have payee
+                'status' => $data['status'] ?? 'pending',
                 'created_by' => $this->auth->getCurrentUser()['id']
             ];
             
-            // Create the cash receipt transaction
-            $result = $this->cashReceiptModel->createCashReceipt($transactionData, $data['account_distribution']);
+            // Prepare distributions for new structure
+            $distributions = [];
+            foreach ($data['account_distribution'] as $distribution) {
+                if (empty($distribution['account_id'])) {
+                    continue;
+                }
+                
+                // Handle debit entries
+                if (!empty($distribution['debit']) && floatval($distribution['debit']) > 0) {
+                    $distributions[] = [
+                        'account_id' => intval($distribution['account_id']),
+                        'amount' => floatval($distribution['debit']),
+                        'description' => $distribution['description'] ?? $data['payment_description'],
+                        'project_id' => !empty($distribution['project_id']) ? intval($distribution['project_id']) : null,
+                        'department_id' => !empty($distribution['department_id']) ? intval($distribution['department_id']) : null,
+                        'supplier_id' => !empty($distribution['subsidiary_id']) ? intval($distribution['subsidiary_id']) : null
+                    ];
+                }
+                
+                // Handle credit entries
+                if (!empty($distribution['credit']) && floatval($distribution['credit']) > 0) {
+                    $distributions[] = [
+                        'account_id' => intval($distribution['account_id']),
+                        'amount' => floatval($distribution['credit']),
+                        'description' => $distribution['description'] ?? $data['payment_description'],
+                        'project_id' => !empty($distribution['project_id']) ? intval($distribution['project_id']) : null,
+                        'department_id' => !empty($distribution['department_id']) ? intval($distribution['department_id']) : null,
+                        'supplier_id' => !empty($distribution['subsidiary_id']) ? intval($distribution['subsidiary_id']) : null
+                    ];
+                }
+            }
+            
+            // Validate distributions
+            if (empty($distributions)) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'At least one valid account distribution is required'
+                ]);
+                return;
+            }
+            
+            // Create transaction using CashReceiptModel
+            $result = $this->cashReceiptModel->createCashReceipt($headerData, $distributions);
             
             if ($result['success']) {
                 // Log audit trail
-                $this->logCreate('transactions', $result['transaction_id'], $transactionData);
+                $this->logCreate('cash_receipts', $result['transaction_id'], $headerData);
                 
                 // Notifications for admins/managers/accountants when created by assistant/user
                 try {
@@ -160,32 +245,32 @@ class CashReceiptController extends Controller {
                     $creatorRole = $currentUser['role'] ?? 'user';
                     if (in_array($creatorRole, ['user', 'assistant'])) {
                         $receipt = $data['reference_no'] ?? 'CR';
-                        $title = 'Cash Receipt Pending Approval';
-                        $msg = sprintf('A cash receipt (CR: %s) was created by %s and is pending review.', $receipt, $currentUser['full_name'] ?? $currentUser['username'] ?? 'User');
+                        $title = 'Cash Receipt Created';
+                        $msg = sprintf('A cash receipt (CR: %s) was created by %s with status: %s.', $receipt, $currentUser['full_name'] ?? $currentUser['username'] ?? 'User', $data['status'] ?? 'pending');
                         $link = APP_URL . '/transaction-entries/cash-receipt?id=' . urlencode((string)$result['transaction_id']);
                         $recipients = $this->db->query("SELECT id FROM users WHERE role IN ('admin','manager','accountant') AND status = 'active'")->fetchAll(PDO::FETCH_ASSOC);
                         foreach ($recipients as $r) {
                             $this->notificationModel->createNotification((int)$r['id'], $title, $msg, $link);
                         }
                     }
-                } catch (Exception $notifyEx) {
-                    error_log('Notification error (cash receipt save): ' . $notifyEx->getMessage());
+                } catch (Exception $e) {
+                    error_log('Error creating notifications: ' . $e->getMessage());
                 }
                 
                 echo json_encode([
                     'success' => true,
                     'message' => 'Cash receipt saved successfully',
-                    'transaction_id' => $result['transaction_id'],
-                    'reference_no' => $data['reference_no']
+                    'transaction_id' => $result['transaction_id']
                 ]);
             } else {
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Failed to save cash receipt: ' . $result['message']
+                    'message' => 'Failed to save cash receipt'
                 ]);
             }
             
         } catch (Exception $e) {
+            error_log('Error saving cash receipt: ' . $e->getMessage());
             echo json_encode([
                 'success' => false,
                 'message' => 'Failed to save cash receipt: ' . $e->getMessage()
@@ -194,7 +279,7 @@ class CashReceiptController extends Controller {
     }
     
     /**
-     * Get cash receipt by ID
+     * Get cash receipt by ID using new structure
      */
     public function get($id) {
         $this->requireAuth();
@@ -202,19 +287,21 @@ class CashReceiptController extends Controller {
         try {
             $transaction = $this->cashReceiptModel->getCashReceiptById($id);
             
-            if (!$transaction) {
-                throw new Exception('Cash receipt not found');
+            if ($transaction) {
+                echo json_encode([
+                    'success' => true,
+                    'data' => $transaction
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Cash receipt not found'
+                ]);
             }
-            
-            echo json_encode([
-                'success' => true,
-                'data' => $transaction
-            ]);
-            
         } catch (Exception $e) {
             echo json_encode([
                 'success' => false,
-                'message' => $e->getMessage()
+                'error' => 'Error retrieving cash receipt: ' . $e->getMessage()
             ]);
         }
     }
@@ -226,7 +313,7 @@ class CashReceiptController extends Controller {
         $this->requireAuth();
         
         try {
-            $data = $_POST;
+            $data = json_decode(file_get_contents('php://input'), true);
             
             // Validate required fields
             if (empty($data['reference_no'])) {
@@ -245,13 +332,20 @@ class CashReceiptController extends Controller {
                 throw new Exception('Insufficient permissions to update transaction status');
             }
             
+            // Get original transaction for comparison
+            $originalTransaction = $this->cashReceiptModel->getCashReceiptById($id);
+            if (!$originalTransaction) {
+                throw new Exception('Cash receipt not found');
+            }
+            
             // Prepare update data
             $updateData = [
                 'reference_no' => $data['reference_no'],
                 'transaction_date' => $data['transaction_date'],
-                'check_payment_status' => $data['payment_status'] ?? 'Pending',
-                'updated_by' => $currentUser['id'],
-                'updated_at' => date('Y-m-d H:i:s')
+                'total_amount' => $originalTransaction['total_amount'], // Keep original amount
+                'description' => $data['description'] ?? $originalTransaction['description'],
+                'status' => $data['status'] ?? $originalTransaction['status'],
+                'updated_by' => $currentUser['id']
             ];
             
             // Update the transaction
@@ -259,23 +353,15 @@ class CashReceiptController extends Controller {
             
             if ($result) {
                 // Log audit trail
-                $this->logUpdate('transactions', $id, $updateData);
+                $this->logUpdate('cash_receipts', $id, $updateData);
                 
                 // Send notification to creator if status changed
-                $originalTransaction = $this->cashReceiptModel->getCashReceiptById($id);
-                if ($originalTransaction && $originalTransaction['created_by'] != $currentUser['id']) {
-                    $statusChanged = false;
-                    if (($data['payment_status'] ?? '') !== ($originalTransaction['check_payment_status'] ?? '')) {
-                        $statusChanged = true;
-                    }
-                    
-                    if ($statusChanged) {
-                        $title = 'Cash Receipt Status Updated';
-                        $msg = sprintf('Your cash receipt (CR: %s) status has been updated by %s.', 
-                                     $data['reference_no'], $currentUser['full_name'] ?? $currentUser['username']);
-                        $link = APP_URL . '/transaction-entries/cash-receipt?id=' . urlencode((string)$id);
-                        $this->notificationModel->createNotification($originalTransaction['created_by'], $title, $msg, $link);
-                    }
+                if (isset($data['status']) && $data['status'] !== $originalTransaction['status']) {
+                    $creatorId = $originalTransaction['created_by'];
+                    $title = 'Cash Receipt Status Updated';
+                    $msg = 'Your cash receipt ' . $data['reference_no'] . ' status has been updated to: ' . $data['status'];
+                    $link = APP_URL . '/transaction-entries/cash-receipt?id=' . urlencode((string)$id);
+                    $this->notificationModel->createNotification($creatorId, $title, $msg, $link);
                 }
                 
                 echo json_encode([
@@ -292,7 +378,7 @@ class CashReceiptController extends Controller {
         } catch (Exception $e) {
             echo json_encode([
                 'success' => false,
-                'message' => 'Failed to update cash receipt: ' . $e->getMessage()
+                'message' => 'Error updating cash receipt: ' . $e->getMessage()
             ]);
         }
     }
@@ -304,37 +390,61 @@ class CashReceiptController extends Controller {
         $this->requireAuth();
         
         try {
+            // Check if user has permission to delete
+            $currentUser = $this->auth->getCurrentUser();
+            $userRole = $currentUser['role'] ?? 'user';
+            
+            if (!in_array($userRole, ['admin', 'manager', 'accountant'])) {
+                throw new Exception('Insufficient permissions to delete transaction');
+            }
+            
+            // Get the transaction to check its status
+            $transaction = $this->cashReceiptModel->getCashReceiptById($id);
+            if (!$transaction) {
+                throw new Exception('Transaction not found');
+            }
+            
+            // Only allow deletion of pending or rejected transactions
+            if ($transaction['status'] === 'approved') {
+                throw new Exception('Cannot delete approved transactions. Only pending or rejected transactions can be deleted.');
+            }
+            
             $result = $this->cashReceiptModel->deleteCashReceipt($id);
             
-            echo json_encode([
-                'success' => true,
-                'message' => 'Cash receipt deleted successfully'
-            ]);
+            if ($result) {
+                // Log audit trail
+                $this->logDelete('cash_receipts', $id);
+                
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Cash receipt deleted successfully'
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Failed to delete cash receipt'
+                ]);
+            }
             
         } catch (Exception $e) {
             echo json_encode([
                 'success' => false,
-                'message' => 'Failed to delete cash receipt: ' . $e->getMessage()
+                'message' => 'Error deleting cash receipt: ' . $e->getMessage()
             ]);
         }
     }
     
     /**
-     * Get recent cash receipts for AJAX
+     * Get recent cash receipts for display
      */
     public function recent() {
-        // Clear any output buffers
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        
-        // Set proper headers
-        header('Content-Type: application/json');
-        
-        $this->requireAuth();
+        // Temporarily comment out auth for debugging
+        // $this->requireAuth();
         
         try {
-            $transactions = $this->cashReceiptModel->getRecentCashReceipts();
+            $transactions = $this->cashReceiptModel->getRecentCashReceipts(50);
+            
+            error_log('Recent cash receipts found: ' . count($transactions));
             
             echo json_encode([
                 'success' => true,
@@ -344,7 +454,62 @@ class CashReceiptController extends Controller {
         } catch (Exception $e) {
             echo json_encode([
                 'success' => false,
-                'message' => 'Failed to fetch recent cash receipts: ' . $e->getMessage()
+                'error' => 'Error retrieving recent cash receipts: ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Server-side DataTable processing for cash receipts
+     */
+    public function datatable() {
+        // Temporarily comment out auth for debugging
+        // $this->requireAuth();
+        
+        try {
+            // Debug logging
+            error_log('DataTable request received: ' . json_encode($_GET));
+            
+            // Get DataTable parameters
+            $draw = $_GET['draw'] ?? 1;
+            $start = $_GET['start'] ?? 0;
+            $length = $_GET['length'] ?? 10;
+            $search = $_GET['search']['value'] ?? '';
+            $orderColumn = $_GET['order'][0]['column'] ?? 0;
+            $orderDir = $_GET['order'][0]['dir'] ?? 'desc';
+            
+            // Column mapping for ordering
+            $columns = [
+                0 => 'cr.transaction_date',
+                1 => 'cr.reference_no',
+                2 => 'cr.payment_form',
+                3 => 'cr.total_amount',
+                4 => 'cr.description',
+                5 => 'cr.status'
+            ];
+            
+            $orderBy = $columns[$orderColumn] ?? 'cr.created_at';
+            
+            // Get data from model
+            $result = $this->cashReceiptModel->getDataTableData($start, $length, $search, $orderBy, $orderDir);
+            
+            $response = [
+                'draw' => (int)$draw,
+                'recordsTotal' => $result['totalRecords'],
+                'recordsFiltered' => $result['filteredRecords'],
+                'data' => $result['data']
+            ];
+            
+            error_log('DataTable response: ' . json_encode($response));
+            echo json_encode($response);
+            
+        } catch (Exception $e) {
+            echo json_encode([
+                'draw' => (int)($draw ?? 1),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Error processing request: ' . $e->getMessage()
             ]);
         }
     }
@@ -366,7 +531,7 @@ class CashReceiptController extends Controller {
         } catch (Exception $e) {
             echo json_encode([
                 'success' => false,
-                'message' => 'Failed to fetch statistics: ' . $e->getMessage()
+                'error' => 'Error retrieving cash receipt statistics: ' . $e->getMessage()
             ]);
         }
     }

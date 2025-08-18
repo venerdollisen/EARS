@@ -72,7 +72,9 @@ class ChartOfAccountsModel extends Model {
         }
         
         // Check transactions
-        $sql = "SELECT COUNT(*) FROM transactions WHERE account_id = ? AND status != 'cancelled'";
+        $sql = "SELECT COUNT(*) FROM transaction_distributions td 
+                JOIN transaction_headers th ON td.header_id = th.id 
+                WHERE td.account_id = ? AND th.status != 'cancelled'";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$accountId]);
         $transactionCount = $stmt->fetchColumn();
@@ -121,21 +123,55 @@ class ChartOfAccountsModel extends Model {
         return $stmt->fetchColumn() > 0;
     }
     
-    public function getAccountBalance($accountId) {
-        $sql = "SELECT 
-                    COALESCE(SUM(CASE WHEN t.transaction_type = 'credit' THEN t.amount ELSE 0 END), 0) as credits,
-                    COALESCE(SUM(CASE WHEN t.transaction_type = 'debit' THEN t.amount ELSE 0 END), 0) as debits
-                FROM transactions t 
-                WHERE t.account_id = ? AND t.parent_transaction_id IS NOT NULL";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$accountId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        return [
-            'credits' => $result['credits'],
-            'debits' => $result['debits'],
-            'balance' => $result['debits'] - $result['credits'] // Debits increase balance, credits decrease
-        ];
+    /**
+     * Check if account has transactions
+     */
+    public function hasTransactions($accountId) {
+        try {
+            $sql = "SELECT COUNT(*) FROM transaction_distributions WHERE account_id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$accountId]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Exception $e) {
+            error_log('Error checking account transactions: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get account balance
+     */
+    public function getAccountBalance($accountId, $dateFrom = null, $dateTo = null) {
+        try {
+            $sql = "SELECT 
+                        COALESCE(SUM(CASE WHEN td.payment_type = 'debit' THEN td.amount ELSE 0 END), 0) as total_debits,
+                        COALESCE(SUM(CASE WHEN td.payment_type = 'credit' THEN td.amount ELSE 0 END), 0) as total_credits
+                    FROM transaction_distributions td
+                    JOIN transaction_headers th ON td.header_id = th.id
+                    WHERE td.account_id = ?";
+            
+            $params = [$accountId];
+            
+            if ($dateFrom && $dateTo) {
+                $sql .= " AND th.transaction_date BETWEEN ? AND ?";
+                $params[] = $dateFrom;
+                $params[] = $dateTo;
+            }
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return [
+                'debits' => $result['total_debits'] ?? 0,
+                'credits' => $result['total_credits'] ?? 0,
+                'balance' => ($result['total_debits'] ?? 0) - ($result['total_credits'] ?? 0)
+            ];
+            
+        } catch (Exception $e) {
+            error_log('Error getting account balance: ' . $e->getMessage());
+            return ['debits' => 0, 'credits' => 0, 'balance' => 0];
+        }
     }
 }
 ?> 

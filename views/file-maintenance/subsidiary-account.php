@@ -23,7 +23,6 @@
                                 <th>Supplier Name</th>
                                 <th>Contact Info</th>
                                 <th>VAT Details</th>
-                                <th>Account</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -59,14 +58,7 @@
                                             <br><small class="text-muted">VAT: <?= htmlspecialchars((string)$supplier['vat_account_code']) ?></small>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <?php if ($supplier['account_code'] && $supplier['account_name']): ?>
-                                            <div><strong><?= htmlspecialchars((string)$supplier['account_code']) ?></strong></div>
-                                            <small class="text-muted"><?= htmlspecialchars((string)$supplier['account_name']) ?></small>
-                                        <?php else: ?>
-                                            <span class="text-muted">No account linked</span>
-                                        <?php endif; ?>
-                                    </td>
+
                                     <td>
                                         <span class="badge bg-<?= $supplier['status'] === 'active' ? 'success' : 'secondary' ?>">
                                             <?= ucfirst($supplier['status']) ?>

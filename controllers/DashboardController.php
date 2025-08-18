@@ -1,16 +1,13 @@
 <?php
 
 require_once 'core/Controller.php';
-require_once 'models/TransactionModel.php';
 require_once 'models/ChartOfAccountsModel.php';
 
 class DashboardController extends Controller {
-    private $transactionModel;
     private $chartOfAccountsModel;
     
     public function __construct() {
         parent::__construct();
-        $this->transactionModel = new TransactionModel();
         $this->chartOfAccountsModel = new ChartOfAccountsModel();
     }
     
@@ -38,28 +35,31 @@ class DashboardController extends Controller {
         try {
             [$dateFrom, $dateTo] = $this->resolveDateRange();
             
-            // Get total receipts
-            $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE transaction_type = 'cash_receipt' AND parent_transaction_id IS NULL AND transaction_date BETWEEN ? AND ?";
+            // Get total receipts from cash_receipts table
+            $sql = "SELECT COALESCE(SUM(total_amount), 0) as total FROM cash_receipts WHERE transaction_date BETWEEN ? AND ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$dateFrom, $dateTo]);
             $receipts = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // Get total cash disbursements
-            $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE transaction_type = 'cash_disbursement' AND parent_transaction_id IS NULL AND transaction_date BETWEEN ? AND ?";
+            // Get total cash disbursements from cash_disbursements table
+            $sql = "SELECT COALESCE(SUM(total_amount), 0) as total FROM cash_disbursements WHERE transaction_date BETWEEN ? AND ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$dateFrom, $dateTo]);
             $cashDisb = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Get total check disbursements
-            $sql = "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE transaction_type = 'check_disbursement' AND parent_transaction_id IS NULL AND transaction_date BETWEEN ? AND ?";
+            // Get total check disbursements from check_disbursements table
+            $sql = "SELECT COALESCE(SUM(total_amount), 0) as total FROM check_disbursements WHERE transaction_date BETWEEN ? AND ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$dateFrom, $dateTo]);
             $checkDisb = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // Get total transactions count
-            $sql = "SELECT COUNT(*) as total FROM transactions WHERE parent_transaction_id IS NULL AND transaction_date BETWEEN ? AND ?";
+            // Get total transactions count from all three tables
+            $sql = "SELECT 
+                        (SELECT COUNT(*) FROM cash_receipts WHERE transaction_date BETWEEN ? AND ?) +
+                        (SELECT COUNT(*) FROM cash_disbursements WHERE transaction_date BETWEEN ? AND ?) +
+                        (SELECT COUNT(*) FROM check_disbursements WHERE transaction_date BETWEEN ? AND ?) as total";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$dateFrom, $dateTo]);
+            $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo, $dateFrom, $dateTo]);
             $transactions = $stmt->fetch(PDO::FETCH_ASSOC);
             
             $totalReceipts = $receipts['total'] ?? 0;
@@ -92,20 +92,42 @@ class DashboardController extends Controller {
         try {
             [$dateFrom, $dateTo] = $this->resolveDateRange();
             
+            // Combine data from all three tables
             $sql = "SELECT 
                         DATE_FORMAT(transaction_date, '%Y-%m') as month,
-                        transaction_type,
+                        'cash_receipt' as transaction_type,
                         COUNT(*) as count,
-                        COALESCE(SUM(amount), 0) as total_amount
-                    FROM transactions 
-                    WHERE parent_transaction_id IS NULL
-                    AND transaction_date BETWEEN ? AND ?
-                    AND transaction_type IN ('cash_receipt','cash_disbursement','check_disbursement')
-                    GROUP BY DATE_FORMAT(transaction_date, '%Y-%m'), transaction_type
+                        COALESCE(SUM(total_amount), 0) as total_amount
+                    FROM cash_receipts 
+                    WHERE transaction_date BETWEEN ? AND ?
+                    GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        DATE_FORMAT(transaction_date, '%Y-%m') as month,
+                        'cash_disbursement' as transaction_type,
+                        COUNT(*) as count,
+                        COALESCE(SUM(total_amount), 0) as total_amount
+                    FROM cash_disbursements 
+                    WHERE transaction_date BETWEEN ? AND ?
+                    GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        DATE_FORMAT(transaction_date, '%Y-%m') as month,
+                        'check_disbursement' as transaction_type,
+                        COUNT(*) as count,
+                        COALESCE(SUM(total_amount), 0) as total_amount
+                    FROM check_disbursements 
+                    WHERE transaction_date BETWEEN ? AND ?
+                    GROUP BY DATE_FORMAT(transaction_date, '%Y-%m')
+                    
                     ORDER BY month ASC, transaction_type";
             
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$dateFrom, $dateTo]);
+            $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo, $dateFrom, $dateTo]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             $this->jsonResponse(['success' => true, 'data' => $data]);
@@ -124,19 +146,36 @@ class DashboardController extends Controller {
         try {
             [$dateFrom, $dateTo] = $this->resolveDateRange();
             
+            // Combine data from all three tables
             $sql = "SELECT 
-                        transaction_type as type,
+                        'cash_receipt' as type,
                         COUNT(*) as count,
-                        COALESCE(SUM(amount), 0) as amount
-                    FROM transactions 
-                    WHERE parent_transaction_id IS NULL
-                    AND transaction_date BETWEEN ? AND ?
-                    AND transaction_type IN ('cash_receipt', 'cash_disbursement', 'check_disbursement')
-                    GROUP BY transaction_type
+                        COALESCE(SUM(total_amount), 0) as amount
+                    FROM cash_receipts 
+                    WHERE transaction_date BETWEEN ? AND ?
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        'cash_disbursement' as type,
+                        COUNT(*) as count,
+                        COALESCE(SUM(total_amount), 0) as amount
+                    FROM cash_disbursements 
+                    WHERE transaction_date BETWEEN ? AND ?
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        'check_disbursement' as type,
+                        COUNT(*) as count,
+                        COALESCE(SUM(total_amount), 0) as amount
+                    FROM check_disbursements 
+                    WHERE transaction_date BETWEEN ? AND ?
+                    
                     ORDER BY amount DESC";
             
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$dateFrom, $dateTo]);
+            $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo, $dateFrom, $dateTo]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             $this->jsonResponse(['success' => true, 'data' => $data]);
@@ -155,24 +194,47 @@ class DashboardController extends Controller {
         try {
             [$dateFrom, $dateTo] = $this->resolveDateRange();
             
+            // Combine data from all three distribution tables
             $sql = "SELECT 
                         coa.account_name,
                         coa.account_code,
-                        COALESCE(SUM(CASE WHEN t.transaction_type = 'debit' THEN t.amount ELSE 0 END), 0) as total_debits,
-                        COALESCE(SUM(CASE WHEN t.transaction_type = 'credit' THEN t.amount ELSE 0 END), 0) as total_credits,
-                        (COALESCE(SUM(CASE WHEN t.transaction_type = 'debit' THEN t.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN t.transaction_type = 'credit' THEN t.amount ELSE 0 END), 0)) as current_balance
+                        COALESCE(SUM(CASE WHEN crd.transaction_type = 'debit' THEN crd.amount ELSE 0 END), 0) +
+                        COALESCE(SUM(CASE WHEN cdd.transaction_type = 'debit' THEN cdd.amount ELSE 0 END), 0) +
+                        COALESCE(SUM(CASE WHEN chdd.transaction_type = 'debit' THEN chdd.amount ELSE 0 END), 0) as total_debits,
+                        COALESCE(SUM(CASE WHEN crd.transaction_type = 'credit' THEN crd.amount ELSE 0 END), 0) +
+                        COALESCE(SUM(CASE WHEN cdd.transaction_type = 'credit' THEN cdd.amount ELSE 0 END), 0) +
+                        COALESCE(SUM(CASE WHEN chdd.transaction_type = 'credit' THEN chdd.amount ELSE 0 END), 0) as total_credits
                     FROM chart_of_accounts coa
-                    LEFT JOIN transactions t ON coa.id = t.account_id AND t.parent_transaction_id IS NOT NULL
+                    LEFT JOIN cash_receipt_details crd ON coa.id = crd.account_id
+                    LEFT JOIN cash_receipts cr ON crd.cash_receipt_id = cr.id AND cr.transaction_date BETWEEN ? AND ?
+                    LEFT JOIN cash_disbursement_details cdd ON coa.id = cdd.account_id
+                    LEFT JOIN cash_disbursements cd ON cdd.cash_disbursement_id = cd.id AND cd.transaction_date BETWEEN ? AND ?
+                    LEFT JOIN check_disbursement_details chdd ON coa.id = chdd.account_id
+                    LEFT JOIN check_disbursements chd ON chdd.check_disbursement_id = chd.id AND chd.transaction_date BETWEEN ? AND ?
                     WHERE coa.status = 'active'
-                    AND (t.transaction_date IS NULL OR t.transaction_date BETWEEN ? AND ?)
                     GROUP BY coa.id, coa.account_name, coa.account_code
-                    HAVING (COALESCE(SUM(CASE WHEN t.transaction_type = 'debit' THEN t.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN t.transaction_type = 'credit' THEN t.amount ELSE 0 END), 0)) != 0
-                    ORDER BY ABS(COALESCE(SUM(CASE WHEN t.transaction_type = 'debit' THEN t.amount ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN t.transaction_type = 'credit' THEN t.amount ELSE 0 END), 0)) DESC
+                    HAVING (COALESCE(SUM(CASE WHEN crd.transaction_type = 'debit' THEN crd.amount ELSE 0 END), 0) +
+                           COALESCE(SUM(CASE WHEN cdd.transaction_type = 'debit' THEN cdd.amount ELSE 0 END), 0) +
+                           COALESCE(SUM(CASE WHEN chdd.transaction_type = 'debit' THEN chdd.amount ELSE 0 END), 0) -
+                           COALESCE(SUM(CASE WHEN crd.transaction_type = 'credit' THEN crd.amount ELSE 0 END), 0) -
+                           COALESCE(SUM(CASE WHEN cdd.transaction_type = 'credit' THEN cdd.amount ELSE 0 END), 0) -
+                           COALESCE(SUM(CASE WHEN chdd.transaction_type = 'credit' THEN chdd.amount ELSE 0 END), 0)) != 0
+                    ORDER BY ABS((COALESCE(SUM(CASE WHEN crd.transaction_type = 'debit' THEN crd.amount ELSE 0 END), 0) +
+                                 COALESCE(SUM(CASE WHEN cdd.transaction_type = 'debit' THEN cdd.amount ELSE 0 END), 0) +
+                                 COALESCE(SUM(CASE WHEN chdd.transaction_type = 'debit' THEN chdd.amount ELSE 0 END), 0) -
+                                 COALESCE(SUM(CASE WHEN crd.transaction_type = 'credit' THEN crd.amount ELSE 0 END), 0) -
+                                 COALESCE(SUM(CASE WHEN cdd.transaction_type = 'credit' THEN cdd.amount ELSE 0 END), 0) -
+                                 COALESCE(SUM(CASE WHEN chdd.transaction_type = 'credit' THEN chdd.amount ELSE 0 END), 0))) DESC
                     LIMIT 10";
             
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$dateFrom, $dateTo]);
+            $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo, $dateFrom, $dateTo]);
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Calculate current balance for each account
+            foreach ($data as &$row) {
+                $row['current_balance'] = $row['total_debits'] - $row['total_credits'];
+            }
             
             $this->jsonResponse(['success' => true, 'data' => $data]);
             

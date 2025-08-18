@@ -4,69 +4,91 @@ require_once BASE_PATH . '/models/JournalEntryModel.php';
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">Journal Entry</h1>
             <div>
-                <h1 class="h3 mb-0">Journal Entry</h1>
-                <p class="text-muted mb-0">Create a new manual journal entry</p>
-            </div>
-            <div class="text-end">
-                <p class="text-muted mb-0">Today is <?= date('m/d/Y') ?></p>
-                <a href="<?= APP_URL ?>/journal-entries" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>Back to List
-                </a>
+                <button type="button" class="btn btn-success" onclick="saveJournalEntry()" id="saveBtn">
+                    <i class="bi bi-save me-2"></i>Save Journal Entry
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row">
-    <div class="col-12">
+    <!-- Journal Entry Form -->
+    <div class="col-lg-12">
         <div class="card shadow">
-            <div class="card-header py-3">
+            <div class="card-header">
                 <h6 class="m-0 font-weight-bold text-primary">Journal Entry Details</h6>
             </div>
             <div class="card-body">
-                <form id="journalEntryForm">
-                                         <!-- Header Information -->
-                     <div class="row mb-3">
-                         <div class="col-md-4">
-                             <label for="reference_no" class="form-label">Journal Voucher Number</label>
-                             <input type="text" class="form-control" id="reference_no" name="reference_no" 
-                                    value="<?= (new JournalEntryModel())->generateReferenceNo() ?>" readonly>
-                         </div>
-                         <div class="col-md-4">
-                             <label for="transaction_date" class="form-label">Date</label>
-                             <input type="date" class="form-control" id="transaction_date" name="transaction_date" 
-                                    value="<?= date('Y-m-d') ?>" required>
-                         </div>
-                         <div class="col-md-4">
-                             <label for="jv_status" class="form-label">JV Status</label>
-                             <select class="form-select" id="jv_status" name="jv_status" required>
-                                 <option value="active">Active</option>
-                                 <option value="inactive">Inactive</option>
-                             </select>
-                         </div>
-                         <div class="col-md-4">
-                             <label for="for_posting" class="form-label">For Posting</label>
-                             <select class="form-select" id="for_posting" name="for_posting" required>
-                                 <option value="for_checking">For Checking</option>
-                                 <option value="for_posting">For Posting</option>
-                             </select>
-                         </div>
-                         <div class="col-md-4">
-                             <label for="reference_number" class="form-label">Reference Number</label>
-                             <input type="text" class="form-control" id="reference_number" name="reference_number">
-                         </div>
-                         <div class="col-md-4">
-                             <label for="bill_invoice_ref" class="form-label">Bill Invoice Ref. No.</label>
-                             <input type="text" class="form-control" id="bill_invoice_ref" name="bill_invoice_ref">
-                         </div>
-                     </div>
+                <form id="journalEntryForm" data-autosave="false">
+                    <input type="hidden" name="transaction_type" value="journal_entry">
                     
-                    <div class="row mb-3">
+                    <!-- Header Information -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reference_no" class="form-label">Journal Voucher Number *</label>
+                                <input type="text" class="form-control" id="reference_no" name="reference_no" 
+                                       value="<?= (new JournalEntryModel())->generateReferenceNo() ?>" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="transaction_date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="transaction_date" name="transaction_date" 
+                                       value="<?= date('Y-m-d') ?>" required>
+                                <small class="form-text text-muted">Current date: <?= date('Y-m-d') ?></small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="jv_status" class="form-label">JV Status</label>
+                                <select class="form-select" id="jv_status" name="jv_status" required>
+                                    <option value="active" selected>Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="for_posting" class="form-label">For Posting</label>
+                                <select class="form-select" id="for_posting" name="for_posting" required>
+                                    <option value="for_checking" selected>For Checking</option>
+                                    <option value="for_posting">For Posting</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reference_number" class="form-label">Reference Number</label>
+                                <input type="text" class="form-control" id="reference_number" name="reference_number" 
+                                       placeholder="Enter reference number">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bill_invoice_ref" class="form-label">Bill Invoice Ref. No.</label>
+                                <input type="text" class="form-control" id="bill_invoice_ref" name="bill_invoice_ref" 
+                                       placeholder="Enter bill/invoice reference">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-12">
-                            <label for="description" class="form-label">Particulars</label>
-                            <textarea class="form-control" id="description" name="description" rows="3" 
-                                      placeholder="Enter journal entry description" required></textarea>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Particulars *</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" 
+                                          placeholder="Enter journal entry description..." required></textarea>
+                            </div>
                         </div>
                     </div>
                     
@@ -79,24 +101,24 @@ require_once BASE_PATH . '/models/JournalEntryModel.php';
                         </div>
                     </div>
                     
-                                         <div class="table-responsive">
-                         <table class="table table-bordered" id="accountDistributionTable">
-                             <thead style="background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                                 <tr>
-                                     <th style="width: 15%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Account Title</th>
-                                     <th style="width: 15%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Project</th>
-                                     <th style="width: 15%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Department</th>
-                                     <th style="width: 20%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Subsidiary Account</th>
-                                     <th style="width: 10%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Debit</th>
-                                     <th style="width: 10%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Credit</th>
-                                     <th style="width: 10%; padding: 8px; font-weight: bold; color: #495057; border: 1px solid #dee2e6;">Action</th>
-                                 </tr>
-                             </thead>
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="accountDistributionTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 25%;">Account Title *</th>
+                                    <th style="width: 15%;">Project</th>
+                                    <th style="width: 15%;">Department</th>
+                                    <th style="width: 15%;">Subsidiary Account</th>
+                                    <th style="width: 10%;">Debit</th>
+                                    <th style="width: 10%;">Credit</th>
+                                    <th style="width: 10%;">Action</th>
+                                </tr>
+                            </thead>
                             <tbody id="accountDistributionLines">
                                 <!-- Account distribution lines will be added here -->
                             </tbody>
                             <tfoot>
-                                <tr>
+                                <tr class="table-light">
                                     <td colspan="4" class="text-end">
                                         <strong>
                                             <span id="balanceStatus" class="text-success">BALANCED</span>:
@@ -118,26 +140,65 @@ require_once BASE_PATH . '/models/JournalEntryModel.php';
                             </button>
                         </div>
                     </div>
-                    
-                    <hr>
-                    
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="d-flex justify-content-end">
-                                <button type="button" class="btn btn-secondary me-2" onclick="resetForm()">
-                                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
-                                </button>
-                                <button type="button" class="btn btn-primary" onclick="saveJournalEntry()" id="saveBtn">
-                                    <i class="bi bi-save me-2"></i>Save Journal Entry
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>
     </div>
+    
+    <!-- Recent Journal Entries -->
+    <div class="col-lg-4" style="display: none;">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Journal Entries</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover" id="recentJournalEntriesTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Reference</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentJournalEntries">
+                            <!-- Recent journal entries will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+/* DataTable alignment fixes */
+.dataTables_wrapper .row { margin: 0; align-items: center; }
+.dataTables_wrapper .col-sm-6 { padding: 0.5rem 0; }
+.dataTables_length { margin-bottom: 0; }
+.dataTables_filter { margin-bottom: 0; text-align: right; }
+.dataTables_filter input { margin-left: 0.5rem; }
+.dataTables_info { padding-top: 0.5rem; }
+.dataTables_paginate { padding-top: 0.5rem; }
+
+/* Form styling */
+.form-label { font-weight: 600; color: #495057; }
+.form-control:focus, .form-select:focus { border-color: #80bdff; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
+
+/* Table styling */
+.table th { background-color: #f8f9fa; border-color: #dee2e6; font-weight: 600; }
+.table td { vertical-align: middle; }
+
+/* Validation styling */
+.is-valid { border-color: #28a745 !important; }
+.is-invalid { border-color: #dc3545 !important; }
+.invalid-feedback { display: block; }
+
+/* Balance status styling */
+#balanceStatus { font-size: 0.9rem; }
+</style>
 
 <script>
 let lineCounter = 0;
@@ -145,6 +206,61 @@ let accounts = <?= json_encode($accounts) ?>;
 let projects = <?= json_encode($projects) ?>;
 let departments = <?= json_encode($departments) ?>;
 let suppliers = <?= json_encode($suppliers) ?>;
+let recentJournalEntriesTable;
+
+$(document).ready(function() {
+    // Initialize with one line
+    addAccountEntry();
+    
+    // Initialize recent journal entries DataTable
+    initializeRecentJournalEntriesTable();
+    
+    // Update balance when any input changes
+    $(document).on('input', '.debit-input, .credit-input', function() {
+        updateBalance();
+    });
+    
+    // Add real-time validation when account or amount changes
+    $(document).on('change', '.account-select, .debit-input, .credit-input', function() {
+        validateAccountingEntry($(this).closest('tr'));
+    });
+});
+
+function initializeRecentJournalEntriesTable() {
+    recentJournalEntriesTable = $('#recentJournalEntriesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: APP_URL + '/api/journal-entries/datatable',
+            type: 'GET',
+            data: function(d) { return d; },
+            error: function(xhr, error, thrown) {
+                console.error('DataTable error:', error);
+            }
+        },
+        columns: [
+            { data: 0 }, // Date
+            { data: 1 }, // Reference
+            { data: 2 }, // Amount
+            { data: 3 }, // Status
+            { data: 4 }  // Action
+        ],
+        pageLength: 5,
+        order: [[0, 'desc']],
+        dom: 'rtip', // Remove length and filter for compact display
+        language: {
+            emptyTable: "No recent journal entries",
+            zeroRecords: "No matching journal entries found"
+        },
+        drawCallback: function() {
+            // Re-attach event handlers for view buttons
+            $('.view-journal-entry-btn').off('click').on('click', function() {
+                const entryId = $(this).data('entry-id');
+                window.open(APP_URL + '/journal-entries/view/' + entryId, '_blank');
+            });
+        }
+    });
+}
 
 function addAccountEntry() {
     lineCounter++;
@@ -154,7 +270,7 @@ function addAccountEntry() {
                 <select class="form-select account-select" name="entries[${lineCounter}][account_id]" required>
                     <option value="">Select Account</option>
                     ${accounts.map(account => 
-                        `<option value="${account.id}">${account.account_code} - ${account.account_name}</option>`
+                        `<option value="${account.id}" data-account-type="${account.account_type}">${account.account_code} - ${account.account_name}</option>`
                     ).join('')}
                 </select>
             </td>
@@ -183,7 +299,7 @@ function addAccountEntry() {
                 </select>
             </td>
             <td>
-                <input type="text" class="form-control debit-input" 
+                <input type="text" class="form-control debit-input text-end" 
                        name="entries[${lineCounter}][debit_amount]" 
                        placeholder="0.00"
                        onkeypress="validateNumericInput(event)"
@@ -191,7 +307,7 @@ function addAccountEntry() {
                        oninput="updateBalance()">
             </td>
             <td>
-                <input type="text" class="form-control credit-input" 
+                <input type="text" class="form-control credit-input text-end" 
                        name="entries[${lineCounter}][credit_amount]" 
                        placeholder="0.00"
                        onkeypress="validateNumericInput(event)"
@@ -293,20 +409,20 @@ function updateBalance() {
     
     const difference = totalDebits - totalCredits;
     
-    $('#totalDebitAmount').text(totalDebits.toFixed(2));
-    $('#totalCreditAmount').text(totalCredits.toFixed(2));
+    $('#totalDebitAmount').text('₱' + totalDebits.toFixed(2));
+    $('#totalCreditAmount').text('₱' + totalCredits.toFixed(2));
     
     // Update balance status
     const balanceStatus = $('#balanceStatus');
-    if (Math.abs(difference) === 0) {
-        balanceStatus.removeClass('text-danger').addClass('text-success').text('BALANCED:');
+    if (Math.abs(difference) < 0.01) {
+        balanceStatus.removeClass('text-danger').addClass('text-success').text('BALANCED');
     } else {
-        balanceStatus.removeClass('text-success').addClass('text-danger').text('UNBALANCED:');
+        balanceStatus.removeClass('text-success').addClass('text-danger').text('UNBALANCED');
     }
     
     // Enable/disable save button based on balance
     const saveBtn = $('#saveBtn');
-    if (Math.abs(difference) === 0 && totalDebits > 0) {
+    if (Math.abs(difference) < 0.01 && totalDebits > 0) {
         saveBtn.prop('disabled', false);
     } else {
         saveBtn.prop('disabled', true);
@@ -384,17 +500,41 @@ function saveJournalEntry() {
         data: JSON.stringify(formData),
         success: function(response) {
             if (response.success) {
-                EARS.showAlert('Journal entry created successfully!', 'success');
+                // Show success message
+                EARS.showAlert(response.message || 'Journal entry created successfully!', 'success');
+                
+                // Show warnings if any
+                if (response.warnings && response.warnings.length > 0) {
+                    const warningMessage = 'Warnings: ' + response.warnings.join(', ');
+                    EARS.showAlert(warningMessage, 'warning');
+                }
+                
+                // Refresh recent journal entries table
+                if (recentJournalEntriesTable) {
+                    recentJournalEntriesTable.ajax.reload();
+                }
+                
+                // Reset form after successful save
                 setTimeout(function() {
-                    window.location.href = APP_URL + '/journal-entries';
+                    resetForm();
                 }, 1500);
             } else {
-                EARS.showAlert(response.error || 'Failed to create journal entry', 'danger');
+                EARS.showAlert(response.error || response.message || 'Failed to create journal entry', 'danger');
             }
         },
         error: function(xhr) {
             const response = xhr.responseJSON;
-            EARS.showAlert(response?.error || 'Failed to create journal entry', 'danger');
+            
+            // Handle accounting validation errors
+            if (response?.error === 'Accounting validation failed') {
+                let errorMessage = 'Accounting validation errors:\n';
+                response.details.forEach(error => {
+                    errorMessage += '• ' + error + '\n';
+                });
+                EARS.showAlert(errorMessage, 'danger');
+            } else {
+                EARS.showAlert(response?.error || 'Failed to create journal entry', 'danger');
+            }
         },
         complete: function() {
             saveBtn.prop('disabled', false).html(originalText);
@@ -403,21 +543,98 @@ function saveJournalEntry() {
 }
 
 function resetForm() {
-    if (confirm('Are you sure you want to reset the form? All data will be lost.')) {
-        $('#journalEntryForm')[0].reset();
-        $('#accountDistributionLines').empty();
-        lineCounter = 0;
-        updateBalance();
+    $('#journalEntryForm')[0].reset();
+    $('#accountDistributionLines').empty();
+    lineCounter = 0;
+    updateBalance();
+    addAccountEntry(); // Add one initial line
+}
+
+// Real-time accounting validation
+function validateAccountingEntry(row) {
+    const accountSelect = row.find('.account-select');
+    const debitInput = row.find('.debit-input');
+    const creditInput = row.find('.credit-input');
+    
+    const accountId = accountSelect.val();
+    const debitAmount = parseFloat(debitInput.val()) || 0;
+    const creditAmount = parseFloat(creditInput.val()) || 0;
+    
+    if (!accountId || (debitAmount === 0 && creditAmount === 0)) {
+        row.removeClass('is-invalid').removeClass('is-valid');
+        return;
+    }
+    
+    // Determine transaction type
+    const transactionType = debitAmount > 0 ? 'debit' : 'credit';
+    const amount = debitAmount > 0 ? debitAmount : creditAmount;
+    
+    // Get account type from the selected option
+    const accountOption = accountSelect.find('option:selected');
+    const accountType = accountOption.data('account-type');
+    
+    if (accountType) {
+        const isValid = validateAccountTypeAndTransaction(accountType, transactionType, amount);
+        
+        if (isValid) {
+            row.removeClass('is-invalid').addClass('is-valid');
+            row.find('.validation-feedback').remove();
+        } else {
+            row.removeClass('is-valid').addClass('is-invalid');
+            
+            // Add validation message if not already present
+            if (row.find('.validation-feedback').length === 0) {
+                const feedback = $('<div class="invalid-feedback validation-feedback"></div>');
+                feedback.text(getValidationMessage(accountType, transactionType));
+                row.append(feedback);
+            }
+        }
     }
 }
 
-// Initialize with one line
-$(document).ready(function() {
-    addAccountEntry();
+function validateAccountTypeAndTransaction(accountType, transactionType, amount) {
+    const rules = {
+        'Asset': { normal: 'debit', increase: 'debit', decrease: 'credit' },
+        'Liability': { normal: 'credit', increase: 'credit', decrease: 'debit' },
+        'Equity': { normal: 'credit', increase: 'credit', decrease: 'debit' },
+        'Revenue': { normal: 'credit', increase: 'credit', decrease: 'debit' },
+        'Expense': { normal: 'debit', increase: 'debit', decrease: 'credit' }
+    };
     
-    // Update balance when any input changes
-    $(document).on('input', '.debit-input, .credit-input', function() {
-        updateBalance();
-    });
-});
+    const rule = rules[accountType];
+    if (!rule) return true; // Unknown account type, allow it
+    
+    // Check if this is an increase or decrease
+    const isIncrease = transactionType === rule.increase;
+    const isDecrease = transactionType === rule.decrease;
+    
+    return isIncrease || isDecrease;
+}
+
+function getValidationMessage(accountType, transactionType) {
+    const messages = {
+        'Asset': {
+            'credit': 'Assets normally decrease with credits (payments)',
+            'debit': 'Assets normally increase with debits (receipts)'
+        },
+        'Liability': {
+            'debit': 'Liabilities normally decrease with debits (payments)',
+            'credit': 'Liabilities normally increase with credits (purchases on credit)'
+        },
+        'Equity': {
+            'debit': 'Equity normally decreases with debits (withdrawals)',
+            'credit': 'Equity normally increases with credits (investments)'
+        },
+        'Revenue': {
+            'debit': 'Revenue normally decreases with debits (refunds/adjustments)',
+            'credit': 'Revenue normally increases with credits (sales)'
+        },
+        'Expense': {
+            'credit': 'Expenses normally decrease with credits (refunds/adjustments)',
+            'debit': 'Expenses normally increase with debits (costs)'
+        }
+    };
+    
+    return messages[accountType]?.[transactionType] || 'Invalid transaction type for this account';
+}
 </script> 

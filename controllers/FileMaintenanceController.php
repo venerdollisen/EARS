@@ -220,7 +220,7 @@ class FileMaintenanceController extends Controller {
                 'tin' => $data['tin'] ?? null,
                 'vat_rate' => $data['vat_rate'] ?? 12.00,
                 'vat_account_id' => $data['vat_account_id'] ?? null,
-                'account_id' => $data['account_id']
+                'account_id' => $data['account_id'] ?? null
             ]);
         } else {
             $supplierModel->updateSupplier($data['id'], [
@@ -233,7 +233,7 @@ class FileMaintenanceController extends Controller {
                 'tin' => $data['tin'] ?? null,
                 'vat_rate' => $data['vat_rate'] ?? 12.00,
                 'vat_account_id' => $data['vat_account_id'] ?? null,
-                'account_id' => $data['account_id']
+                'account_id' => $data['account_id'] ?? null
             ]);
         }
     }

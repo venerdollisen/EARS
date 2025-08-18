@@ -1,257 +1,461 @@
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 mb-0">Trial Balance</h1>
-                <p class="text-muted mb-0">Account balances as of <?= date('F d, Y', strtotime($dateFrom)) ?> to <?= date('F d, Y', strtotime($dateTo)) ?></p>
-            </div>
-            <div>
-                <button class="btn btn-outline-primary btn-sm me-2" onclick="exportReport('pdf')">
-                    <i class="bi bi-file-pdf me-1"></i>Export PDF
-                </button>
-                <button class="btn btn-outline-success btn-sm me-2" onclick="exportReport('excel')">
-                    <i class="bi bi-file-excel me-1"></i>Export Excel
-                </button>
-                <a href="<?= APP_URL ?>/reports" class="btn btn-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Reports
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Date Range Filter -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow">
-            <div class="card-body">
-                <form method="GET" action="<?= APP_URL ?>/reports/trial-balance" class="row g-3">
-                    <div class="col-md-4">
-                        <label for="date_from" class="form-label">From Date</label>
-                        <input type="date" class="form-control" id="date_from" name="date_from" 
-                               value="<?= htmlspecialchars($dateFrom) ?>" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="date_to" class="form-label">To Date</label>
-                        <input type="date" class="form-control" id="date_to" name="date_to" 
-                               value="<?= htmlspecialchars($dateTo) ?>" required>
-                    </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary me-2">
-                            <i class="bi bi-search me-1"></i>Generate Report
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="resetDates()">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Trial Balance Table -->
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Trial Balance Report</h6>
-            </div>
-            <div class="card-body">
-                <?php if (empty($accounts)): ?>
-                    <div class="text-center py-4">
-                        <i class="bi bi-inbox fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No transactions found</h5>
-                        <p class="text-muted">There are no transactions in the selected date range.</p>
-                    </div>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped" id="trialBalanceTable">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Account Code</th>
-                                    <th>Account Name</th>
-                                    <th>Account Type</th>
-                                    <th class="text-end">Debits</th>
-                                    <th class="text-end">Credits</th>
-                                    <th class="text-end">Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $totalDebits = 0;
-                                $totalCredits = 0;
-                                $currentType = '';
-                                foreach ($accounts as $account): 
-                                    if ($currentType !== $account['account_type']):
-                                        if ($currentType !== ''): ?>
-                                            <tr class="table-light">
-                                                <td colspan="3"><strong><?= htmlspecialchars($currentType) ?> Total</strong></td>
-                                                <td class="text-end"><strong><?= number_format($typeDebits, 2) ?></strong></td>
-                                                <td class="text-end"><strong><?= number_format($typeCredits, 2) ?></strong></td>
-                                                <td class="text-end"><strong><?= number_format($typeDebits - $typeCredits, 2) ?></strong></td>
-                                            </tr>
-                                        <?php endif;
-                                        $currentType = $account['account_type'];
-                                        $typeDebits = 0;
-                                        $typeCredits = 0;
-                                    endif;
-                                    
-                                    $typeDebits += $account['total_debits'];
-                                    $typeCredits += $account['total_credits'];
-                                    $totalDebits += $account['total_debits'];
-                                    $totalCredits += $account['total_credits'];
-                                ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($account['account_code']) ?></td>
-                                    <td><?= htmlspecialchars($account['account_name']) ?></td>
-                                    <td><?= htmlspecialchars($account['account_type']) ?></td>
-                                    <td class="text-end"><?= number_format($account['total_debits'], 2) ?></td>
-                                    <td class="text-end"><?= number_format($account['total_credits'], 2) ?></td>
-                                    <td class="text-end <?= $account['balance'] < 0 ? 'text-danger' : 'text-success' ?>">
-                                        <?= number_format(abs($account['balance']), 2) ?>
-                                        <?= $account['balance'] < 0 ? '(Cr)' : '(Dr)' ?>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                                
-                                <!-- Last type total -->
-                                <?php if ($currentType !== ''): ?>
-                                    <tr class="table-light">
-                                        <td colspan="3"><strong><?= htmlspecialchars($currentType) ?> Total</strong></td>
-                                        <td class="text-end"><strong><?= number_format($typeDebits, 2) ?></strong></td>
-                                        <td class="text-end"><strong><?= number_format($typeCredits, 2) ?></strong></td>
-                                        <td class="text-end"><strong><?= number_format($typeDebits - $typeCredits, 2) ?></strong></td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                            <tfoot class="table-dark">
-                                <tr>
-                                    <td colspan="3"><strong>GRAND TOTAL</strong></td>
-                                    <td class="text-end"><strong><?= number_format($totalDebits, 2) ?></strong></td>
-                                    <td class="text-end"><strong><?= number_format($totalCredits, 2) ?></strong></td>
-                                    <td class="text-end">
-                                        <strong class="<?= ($totalDebits - $totalCredits) == 0 ? 'text-success' : 'text-danger' ?>">
-                                            <?= number_format($totalDebits - $totalCredits, 2) ?>
-                                        </strong>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    
-                    <!-- Balance Check -->
-                    <?php if (($totalDebits - $totalCredits) == 0): ?>
-                        <div class="alert alert-success mt-3">
-                            <i class="bi bi-check-circle me-2"></i>
-                            <strong>Trial Balance is balanced!</strong> Total debits equal total credits.
-                        </div>
-                    <?php else: ?>
-                        <div class="alert alert-danger mt-3">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Trial Balance is not balanced!</strong> 
-                            Difference: <?= number_format(abs($totalDebits - $totalCredits), 2) ?>
-                        </div>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Summary Cards -->
-<?php if (!empty($accounts)): ?>
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total Debits
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            ₱<?= number_format($totalDebits, 2) ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-arrow-up-circle fa-2x text-gray-300"></i>
-                    </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Trial Balance Report</h4>
+                    <p class="card-text">Generate and view trial balance reports with filtering options</p>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Total Credits
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            ₱<?= number_format($totalCredits, 2) ?>
+                <div class="card-body">
+                    <!-- Filters Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Filters</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="trialBalanceForm">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="start_date">Start Date</label>
+                                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="end_date">End Date</label>
+                                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="account_id">Account</label>
+                                                    <select class="form-control" id="account_id" name="account_id">
+                                                        <option value="">All Accounts</option>
+                                                        <?php foreach ($accounts as $account): ?>
+                                                            <option value="<?= $account['id'] ?>"><?= $account['account_code'] ?> - <?= $account['account_name'] ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="account_type_id">Account Type</label>
+                                                    <select class="form-control" id="account_type_id" name="account_type_id">
+                                                        <option value="">All Types</option>
+                                                        <?php foreach ($accountTypes as $type): ?>
+                                                            <option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['type_name']) ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-12">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="bi bi-search"></i> Generate Report
+                                                </button>
+                                                <button type="button" class="btn btn-success" onclick="exportReport('excel')">
+                                                    <i class="bi bi-file-earmark-excel"></i> Export Excel
+                                                </button>
+                                                <button type="button" class="btn btn-danger" onclick="exportReport('pdf')">
+                                                    <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-auto">
-                        <i class="bi bi-arrow-down-circle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card border-left-<?= ($totalDebits - $totalCredits) == 0 ? 'success' : 'danger' ?> shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-<?= ($totalDebits - $totalCredits) == 0 ? 'success' : 'danger' ?> text-uppercase mb-1">
-                            Difference
+
+                    <!-- Summary Cards -->
+                    <div class="row mb-4" id="summaryCards" style="display: none;">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Accounts</h5>
+                                    <h3 id="totalAccounts">0</h3>
+                                </div>
+                            </div>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            ₱<?= number_format($totalDebits - $totalCredits, 2) ?>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Debits</h5>
+                                    <h3 id="totalDebits">₱0.00</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Credits</h5>
+                                    <h3 id="totalCredits">₱0.00</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Net Balance</h5>
+                                    <h3 id="netBalance">₱0.00</h3>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-auto">
-                        <i class="bi bi-<?= ($totalDebits - $totalCredits) == 0 ? 'check' : 'x' ?>-circle fa-2x text-gray-300"></i>
+
+                    <!-- Charts Section -->
+                    <div class="row mb-4" id="chartsSection" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Balance by Account Type</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="accountTypeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Balance Distribution</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="balanceDistributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Accounts Chart -->
+                    <div class="row mb-4" id="topAccountsSection" style="display: none;">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Top Accounts by Balance</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="topAccountsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Trial Balance Details</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="loadingSpinner" class="text-center" style="display: none;">
+                                        <div class="spinner-border" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                    <div id="reportData" style="display: none;">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-bordered" id="trialBalanceTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Account Code</th>
+                                                        <th>Account Name</th>
+                                                        <th>Account Type</th>
+                                                        <th class="text-right">Total Debits</th>
+                                                        <th class="text-right">Total Credits</th>
+                                                        <th class="text-right">Balance</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="trialBalanceTableBody">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<?php endif; ?>
 
 <script>
-function exportReport(format) {
-    const url = `${APP_URL}/reports/export-report?type=trial_balance&format=${format}&date_from=${document.getElementById('date_from').value}&date_to=${document.getElementById('date_to').value}`;
-    
-    // Show loading
-    EARS.showAlert('Generating report...', 'info');
-    
-    // For now, just show a message
-    setTimeout(() => {
-        EARS.showAlert('Export functionality will be implemented in the next phase', 'warning');
-    }, 1000);
-}
+let accountTypeChart, balanceDistributionChart, topAccountsChart;
 
-function resetDates() {
-    const currentYear = new Date().getFullYear();
-    document.getElementById('date_from').value = `${currentYear}-01-01`;
-    document.getElementById('date_to').value = `${currentYear}-12-31`;
-}
-
-// Initialize DataTable
 $(document).ready(function() {
-    $('#trialBalanceTable').DataTable({
-        pageLength: 25,
-        order: [[0, 'asc']],
-        dom: 'Bfrtip',
-        buttons: [
-            'copy', 'csv', 'excel', 'pdf', 'print'
-        ]
+    // Set default dates
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    $('#start_date').val(firstDay.toISOString().split('T')[0]);
+    $('#end_date').val(today.toISOString().split('T')[0]);
+    
+    // Form submission
+    $('#trialBalanceForm').on('submit', function(e) {
+        e.preventDefault();
+        generateReport();
     });
 });
-</script> 
+
+function generateReport() {
+    const formData = new FormData($('#trialBalanceForm')[0]);
+    
+    // Show loading spinner
+    $('#loadingSpinner').show();
+    $('#reportData').hide();
+    $('#noDataMessage').hide();
+    $('#summaryCards').hide();
+    $('#chartsSection').hide();
+    $('#topAccountsSection').hide();
+
+    console.log('Sending request to:', APP_URL + '/api/trial-balance-report/generate');
+
+    $.ajax({
+        url: APP_URL + '/api/trial-balance-report/generate',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            $('#loadingSpinner').hide();
+            console.log('Success callback triggered');
+            console.log('Response type:', typeof response);
+            console.log('Raw response:', response);
+            
+            // Parse JSON response
+            let parsedResponse;
+            try {
+                if (typeof response === 'string') {
+                    parsedResponse = JSON.parse(response);
+                } else {
+                    parsedResponse = response;
+                }
+                console.log('Parsed response:', parsedResponse);
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                showAlert('error', 'Invalid response format');
+                return;
+            }
+            
+            console.log('parsedResponse.success:', parsedResponse.success);
+            console.log('parsedResponse.success === true:', parsedResponse.success === true);
+            
+            if (parsedResponse && parsedResponse.success === true) {
+                console.log('Calling displayReport');
+                displayReport(parsedResponse);
+            } else {
+                console.log('Showing error alert');
+                showAlert('error', 'Error generating report: ' + (parsedResponse.message || 'Unknown error'));
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#loadingSpinner').hide();
+            console.error('Error callback triggered');
+            console.error('AJAX Error:', xhr.responseText);
+            console.error('Status:', status);
+            console.error('Error:', error);
+            console.error('Response headers:', xhr.getAllResponseHeaders());
+            showAlert('error', 'Error generating report: ' + error);
+        }
+    });
+}
+
+function displayReport(response) {
+    // Update summary cards
+    $('#totalAccounts').text(response.summary.total_accounts);
+    $('#totalDebits').text('₱' + parseFloat(response.summary.total_debits).toLocaleString('en-US', {minimumFractionDigits: 2}));
+    $('#totalCredits').text('₱' + parseFloat(response.summary.total_credits).toLocaleString('en-US', {minimumFractionDigits: 2}));
+    $('#netBalance').text('₱' + parseFloat(response.summary.net_balance).toLocaleString('en-US', {minimumFractionDigits: 2}));
+    $('#summaryCards').show();
+    
+    // Update data table
+    updateDataTable(response.data);
+    $('#reportData').show();
+    
+    // Update charts
+    updateCharts(response.charts);
+    $('#chartsSection').show();
+    $('#topAccountsSection').show();
+}
+
+function updateDataTable(data) {
+    const tbody = $('#trialBalanceTableBody');
+    tbody.empty();
+    
+    data.forEach(function(row) {
+        const tr = $('<tr>');
+        tr.append('<td>' + row.account_code + '</td>');
+        tr.append('<td>' + row.account_name + '</td>');
+        tr.append('<td>' + row.account_type + '</td>');
+        tr.append('<td class="text-right">₱' + parseFloat(row.total_debits).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
+        tr.append('<td class="text-right">₱' + parseFloat(row.total_credits).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
+        tr.append('<td class="text-right">₱' + parseFloat(row.balance).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
+        tbody.append(tr);
+    });
+}
+
+function updateCharts(chartData) {
+    // Account Type Chart
+    if (accountTypeChart) {
+        accountTypeChart.destroy();
+    }
+    
+    const accountTypeCtx = document.getElementById('accountTypeChart').getContext('2d');
+    accountTypeChart = new Chart(accountTypeCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.byAccountType.map(item => item.account_type),
+            datasets: [{
+                label: 'Total Debits',
+                data: chartData.byAccountType.map(item => parseFloat(item.total_debits)),
+                backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                borderColor: 'rgba(40, 167, 69, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Total Credits',
+                data: chartData.byAccountType.map(item => parseFloat(item.total_credits)),
+                backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                borderColor: 'rgba(255, 193, 7, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₱' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ₱' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Balance Distribution Chart
+    if (balanceDistributionChart) {
+        balanceDistributionChart.destroy();
+    }
+    
+    const balanceDistributionCtx = document.getElementById('balanceDistributionChart').getContext('2d');
+    balanceDistributionChart = new Chart(balanceDistributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.balanceDistribution.map(item => item.balance_type),
+            datasets: [{
+                data: chartData.balanceDistribution.map(item => parseInt(item.account_count)),
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(108, 117, 125, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(40, 167, 69, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(108, 117, 125, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + ' accounts';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Top Accounts Chart
+    if (topAccountsChart) {
+        topAccountsChart.destroy();
+    }
+    
+    const topAccountsCtx = document.getElementById('topAccountsChart').getContext('2d');
+    topAccountsChart = new Chart(topAccountsCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.topAccounts.map(item => item.account_code + ' - ' + item.account_name.substring(0, 20)),
+            datasets: [{
+                label: 'Balance Amount',
+                data: chartData.topAccounts.map(item => parseFloat(item.balance_amount)),
+                backgroundColor: 'rgba(0, 123, 255, 0.8)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₱' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Balance: ₱' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function exportReport(format) {
+    const formData = new FormData($('#trialBalanceForm')[0]);
+    const params = new URLSearchParams();
+    
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    const url = APP_URL + '/api/trial-balance-report/export' + (format === 'pdf' ? 'PDF' : 'Excel') + '?' + params.toString();
+    window.open(url, '_blank');
+}
+
+function showAlert(type, message) {
+    const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+    const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    $('.card-body').first().prepend(alertHtml);
+}
+</script>

@@ -16,7 +16,18 @@ $rec = $record ?? [
           </div>
           <div class="mb-3">
             <label class="form-label">Password <?= $isEdit ? '<small class="text-muted">(leave blank to keep)</small>' : '*' ?></label>
-            <input type="password" class="form-control" name="password" <?= $isEdit ? '' : 'required' ?>>
+            <div class="input-group">
+              <input type="password" class="form-control" name="password" id="password" <?= $isEdit ? '' : 'required' ?>>
+              <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <div class="password-strength mt-2">
+              <div class="progress" style="height: 5px;">
+                <div class="progress-bar" id="passwordStrengthBar" role="progressbar" style="width: 0%"></div>
+              </div>
+              <small class="form-text text-muted" id="passwordStrengthText">Minimum 8 characters</small>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Full Name</label>
@@ -57,10 +68,112 @@ $rec = $record ?? [
   </div>
 </div>
 <script>
+// Password strength checker
+function checkPasswordStrength(password) {
+    let strength = 0;
+    let feedback = [];
+    
+    if (password.length >= 8) {
+        strength += 25;
+        feedback.push('Length ✓');
+    } else {
+        feedback.push('At least 8 characters');
+    }
+    
+    if (/[a-z]/.test(password)) {
+        strength += 25;
+        feedback.push('Lowercase ✓');
+    } else {
+        feedback.push('Lowercase letter');
+    }
+    
+    if (/[A-Z]/.test(password)) {
+        strength += 25;
+        feedback.push('Uppercase ✓');
+    } else {
+        feedback.push('Uppercase letter');
+    }
+    
+    if (/[0-9]/.test(password)) {
+        strength += 25;
+        feedback.push('Number ✓');
+    } else {
+        feedback.push('Number');
+    }
+    
+    return { strength, feedback };
+}
+
+// Update password strength indicator
+function updatePasswordStrength() {
+    const password = $('#password').val();
+    const isEdit = <?= $isEdit ? 'true' : 'false' ?>;
+    
+    // Hide strength indicator if password is empty in edit mode
+    if (isEdit && (!password || password.trim() === '')) {
+        $('#passwordStrengthBar').css('width', '0%');
+        $('#passwordStrengthText').text('Leave blank to keep current password').removeClass('text-success text-warning text-info text-danger').addClass('text-muted');
+        return;
+    }
+    
+    const { strength, feedback } = checkPasswordStrength(password);
+    
+    const bar = $('#passwordStrengthBar');
+    const text = $('#passwordStrengthText');
+    
+    bar.css('width', strength + '%');
+    
+    if (strength <= 25) {
+        bar.removeClass('bg-success bg-warning bg-info').addClass('bg-danger');
+        text.removeClass('text-success text-warning text-info text-muted').addClass('text-danger');
+    } else if (strength <= 50) {
+        bar.removeClass('bg-success bg-danger bg-info').addClass('bg-warning');
+        text.removeClass('text-success text-danger text-info text-muted').addClass('text-warning');
+    } else if (strength <= 75) {
+        bar.removeClass('bg-danger bg-warning bg-success').addClass('bg-info');
+        text.removeClass('text-danger text-warning text-success text-muted').addClass('text-info');
+    } else {
+        bar.removeClass('bg-danger bg-warning bg-info').addClass('bg-success');
+        text.removeClass('text-danger text-warning text-info text-muted').addClass('text-success');
+    }
+    
+    text.text(feedback.join(', '));
+}
+
 function submitUser() {
   const form = $('#userForm');
   const data = Object.fromEntries(new FormData(form[0]).entries());
   const isEdit = <?= $isEdit ? 'true' : 'false' ?>;
+  
+  // Validate password for new users
+  if (!isEdit && (!data.password || data.password.trim() === '')) {
+    EARS.showAlert('Password is required for new users', 'danger', '#globalAlertContainer');
+    return;
+  }
+  
+  // Validate password strength for new users or when password is provided in edit mode
+  if ((!isEdit || (isEdit && data.password && data.password.trim() !== '')) && data.password) {
+    if (data.password.length < 8) {
+      EARS.showAlert('Password must be at least 8 characters long', 'danger', '#globalAlertContainer');
+      return;
+    }
+    
+    if (!/[a-z]/.test(data.password)) {
+      EARS.showAlert('Password must contain at least one lowercase letter', 'danger', '#globalAlertContainer');
+      return;
+    }
+    
+    if (!/[A-Z]/.test(data.password)) {
+      EARS.showAlert('Password must contain at least one uppercase letter', 'danger', '#globalAlertContainer');
+      return;
+    }
+    
+    if (!/[0-9]/.test(data.password)) {
+      EARS.showAlert('Password must contain at least one number', 'danger', '#globalAlertContainer');
+      return;
+    }
+  }
+  
   const url = isEdit ? (APP_URL + '/api/users/update/<?= (int)($rec['id'] ?? 0) ?>') : (APP_URL + '/api/users/create');
   $.ajax({
     url: url,
@@ -80,5 +193,27 @@ function submitUser() {
     }
   });
 }
+
+// Initialize password functionality
+$(document).ready(function() {
+    // Password strength validation
+    $('#password').on('input', function() {
+        updatePasswordStrength();
+    });
+    
+    // Password toggle functionality
+    $('#togglePassword').on('click', function() {
+        const input = $('#password');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+    });
+});
 </script>
 

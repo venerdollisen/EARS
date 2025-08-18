@@ -4,6 +4,32 @@
   top: 0;
   z-index: 1080;
 }
+
+/* Password strength indicator */
+.password-strength .progress {
+  background-color: #e9ecef;
+  border-radius: 0.375rem;
+}
+
+.password-strength .progress-bar {
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.password-strength .progress-bar.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.password-strength .progress-bar.bg-warning {
+  background-color: #ffc107 !important;
+}
+
+.password-strength .progress-bar.bg-info {
+  background-color: #0dcaf0 !important;
+}
+
+.password-strength .progress-bar.bg-success {
+  background-color: #198754 !important;
+}
 /* Custom CSS for EARS Dashboard */
 
 :root {

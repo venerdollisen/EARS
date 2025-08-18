@@ -123,24 +123,6 @@ CREATE TABLE departments (
     FOREIGN KEY (updated_by) REFERENCES users(id)
 );
 
--- Transactions table
-CREATE TABLE transactions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    transaction_type ENUM('cash_receipt', 'disbursement', 'journal_adjustment') NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,
-    account_id INT NOT NULL,
-    supplier_id INT,
-    description TEXT,
-    reference_no VARCHAR(50) UNIQUE NOT NULL,
-    transaction_date DATE NOT NULL,
-    created_by INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id),
-    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
-    FOREIGN KEY (created_by) REFERENCES users(id)
-);
-
 -- Insert default data
 
 -- Default admin user (password: admin123)
@@ -154,7 +136,7 @@ INSERT INTO accounting_parameters (parameter_name, parameter_value, description,
 ('company_phone', '', 'Company Phone', 'company'),
 ('company_email', '', 'Company Email', 'company'),
 ('fiscal_year_start', '2024-01-01', 'Fiscal Year Start Date', 'fiscal'),
-('fiscal_year_end', '2024-12-31', 'Fiscal Year End Date', 'fiscal'),
+('fiscal_year_end', '2025-12-31', 'Fiscal Year End Date', 'fiscal'),
 ('default_currency', 'PHP', 'Default Currency', 'currency'),
 ('decimal_places', '2', 'Number of Decimal Places', 'display'),
 ('date_format', 'Y-m-d', 'Date Format', 'display'),
@@ -217,14 +199,6 @@ INSERT INTO accounting_parameters (parameter_name, parameter_value, description,
 ('sms_api_key', '', 'SMS API Key', 'notifications'),
 ('sms_api_secret', '', 'SMS API Secret', 'notifications');
 
--- Default account title groups
-INSERT INTO account_title_groups (group_name, description) VALUES
-('Assets', 'Current and non-current assets'),
-('Liabilities', 'Current and long-term liabilities'),
-('Equity', "Owner's equity and retained earnings"),
-('Revenue', 'Income and revenue accounts'),
-('Expenses', 'Operating and non-operating expenses');
-
 -- Default COA account types
 INSERT INTO coa_account_types (type_name, description) VALUES
 ('Asset', 'Accounts that represent economic resources'),
@@ -233,19 +207,41 @@ INSERT INTO coa_account_types (type_name, description) VALUES
 ('Revenue', 'Accounts that represent income'),
 ('Expense', 'Accounts that represent costs');
 
+-- Default account title groups
+-- Seed data for account_title_groups
+INSERT INTO account_title_groups (group_name, description, status)
+VALUES
+  ('Current Assets', 'Accounts under short-term asset category', 'active'),
+  ('Fixed Assets', 'Accounts for long-term tangible assets', 'active'),
+  ('Intangible Assets', 'Non-physical assets like goodwill or patents', 'active'),
+  ('Current Liabilities', 'Short-term financial obligations', 'active'),
+  ('Long-term Liabilities', 'Debts and obligations due beyond one year', 'active'),
+  ('Operating Expenses', 'Day-to-day business operating costs', 'active'),
+  ('Administrative Expenses', 'General overhead expenses not directly tied to production', 'active'),
+  ('Revenue', 'Income earned from normal business operations', 'active'),
+  ('Other Income', 'Non-operating income such as interest or investment returns', 'active'),
+  ('VAT Accounts', 'Group for VAT-related accounts (e.g., Input VAT, Output VAT)', 'active');
+
+
 -- Default chart of accounts
-INSERT INTO chart_of_accounts (account_code, account_name, account_type_id, group_id, description) VALUES
-('1000', 'Cash and Cash Equivalents', 1, 1, 'Cash on hand and in bank'),
-('1100', 'Accounts Receivable', 1, 1, 'Amounts owed by customers'),
-('1200', 'Inventory', 1, 1, 'Goods held for sale'),
-('2000', 'Accounts Payable', 2, 2, 'Amounts owed to suppliers'),
-('3000', "Owner's Equity", 3, 3, "Owner's investment and retained earnings"),
-('4000', 'Sales Revenue', 4, 4, 'Revenue from sales of goods/services'),
-('5000', 'Cost of Goods Sold', 5, 5, 'Direct costs of producing goods'),
-('6000', 'Operating Expenses', 5, 5, 'General and administrative expenses'),
-('2100', 'Input VAT', 2, 2, 'VAT paid on purchases'),
-('2200', 'Output VAT', 2, 2, 'VAT collected on sales'),
-('2300', 'VAT Payable', 2, 2, 'VAT payable to BIR');
+INSERT INTO chart_of_accounts (account_code, account_name, account_type_id, group_id, description)
+VALUES
+  ('1000', 'Cash on Hand', 1, 1, 'Physical cash available'),
+  ('1001', 'Accounts Receivable', 1, 1, 'Amounts owed by customers'),
+  ('1002', 'Input VAT', 1, 10, 'VAT paid on purchases, claimable from government'),
+  ('1100', 'Office Equipment', 1, 2, 'Office furniture and equipment'),
+  ('1200', 'Goodwill', 1, 3, 'Intangible asset from acquisition'),
+  ('2000', 'Accounts Payable', 2, 4, 'Amounts owed to suppliers'),
+  ('2001', 'VAT Payable', 2, 10, 'Tax collected from customers to be remitted to government'),
+  ('2100', 'Bank Loan', 2, 5, 'Long-term loan from bank'),
+--   ('3000', 'Common Stock', 3, NULL, 'Owner investment in company'),
+--   ('3100', 'Retained Earnings', 3, NULL, 'Accumulated profits reinvested'),
+  ('4000', 'Sales Revenue', 4, 8, 'Income from sales of products/services'),
+  ('4100', 'Service Revenue', 4, 8, 'Income from service fees'),
+  ('5000', 'Salaries Expense', 5, 6, 'Costs of employee wages'),
+  ('5100', 'Rent Expense', 5, 6, 'Costs of office rent'),
+  ('5200', 'Office Supplies Expense', 5, 7, 'Costs of office materials and supplies');
+
 
 -- Default suppliers
 INSERT INTO suppliers (supplier_name, contact_person, phone, email, address, vat_subject, tin, vat_rate, vat_account_id, account_id) VALUES
@@ -265,314 +261,6 @@ INSERT INTO departments (department_code, department_name, description, manager,
 ('DEPT-003', 'Information Technology', 'IT support and system administration', 'Roberto Garcia', '3rd Floor, Annex Building', 'active'),
 ('DEPT-004', 'Marketing Department', 'Marketing and sales operations', 'Isabel Torres', '1st Floor, Main Building', 'active'),
 ('DEPT-005', 'Operations Department', 'General operations and logistics', 'Miguel Rodriguez', 'Ground Floor, Warehouse', 'active');
-
--- Add new columns to transactions table
-ALTER TABLE transactions 
-ADD COLUMN payment_form ENUM('cash', 'check', 'bank_transfer', 'credit_card') DEFAULT 'cash' AFTER transaction_type,
-ADD COLUMN check_number VARCHAR(50) NULL AFTER payment_form,
-ADD COLUMN bank VARCHAR(100) NULL AFTER check_number,
-ADD COLUMN billing_number VARCHAR(100) NULL AFTER bank,
-ADD COLUMN parent_transaction_id INT NULL AFTER billing_number,
-ADD COLUMN STATUS ENUM('draft', 'posted', 'cancelled') DEFAULT 'posted' AFTER parent_transaction_id,
-ADD COLUMN payee_name VARCHAR(255) NULL AFTER STATUS,
-ADD COLUMN po_number VARCHAR(100) NULL AFTER payee_name,
-ADD COLUMN cwo_number VARCHAR(100) NULL AFTER po_number,
-ADD COLUMN ebr_number VARCHAR(100) NULL AFTER cwo_number,
-ADD COLUMN check_date DATE NULL AFTER ebr_number,
-ADD COLUMN cv_status ENUM('Active', 'Inactive', 'Pending', 'Approved', 'Rejected') DEFAULT 'Active' AFTER check_date,
-ADD COLUMN cv_checked ENUM('Checked', 'Unchecked', 'Pending') DEFAULT 'Checked' AFTER cv_status,
-ADD COLUMN check_payment_status ENUM('Approved', 'Pending', 'Rejected', 'On Hold') DEFAULT 'Approved' AFTER cv_checked,
-ADD COLUMN return_reason VARCHAR(120) NULL AFTER check_payment_status,
-ADD COLUMN project_id INT NULL AFTER return_reason,
-ADD COLUMN department_id INT NULL AFTER project_id;
-
--- Add index for better performance
-CREATE INDEX idx_transactions_parent_id ON transactions(parent_transaction_id);
-CREATE INDEX idx_transactions_reference ON transactions(reference_no);
-CREATE INDEX idx_transactions_date ON transactions(transaction_date);
-
--- Update existing transactions to have proper status
-UPDATE transactions SET STATUS = 'posted' WHERE STATUS IS NULL;
-
--- Add foreign key for parent_transaction_id (self-referencing)
-ALTER TABLE transactions 
-ADD CONSTRAINT fk_transactions_parent 
-FOREIGN KEY (parent_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL;
-
--- Add foreign keys for project_id and department_id
-ALTER TABLE transactions 
-ADD CONSTRAINT fk_transactions_project 
-FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
-
-ALTER TABLE transactions 
-ADD CONSTRAINT fk_transactions_department 
-FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL;
-
--- Add VAT subject and TIN columns to suppliers table
-ALTER TABLE suppliers 
-ADD COLUMN vat_subject ENUM('VAT', 'Non-VAT', 'Zero-Rated') DEFAULT 'VAT' AFTER address,
-ADD COLUMN tin VARCHAR(20) NULL AFTER vat_subject; 
-
--- Seed sample cash receipt data (1000 headers with 2-5 distribution lines each)
-DELIMITER $$
-DROP PROCEDURE IF EXISTS seed_cash_receipts $$
-CREATE PROCEDURE seed_cash_receipts(IN headerCount INT)
-BEGIN
-    DECLARE i INT DEFAULT 1;
-    DECLARE distCount INT;
-    DECLARE headerId INT;
-    DECLARE trnDate DATE;
-    DECLARE refNo VARCHAR(50);
-    DECLARE debitAmt DECIMAL(15,2);
-    DECLARE creditAmt DECIMAL(15,2);
-    DECLARE acc1 INT;
-    DECLARE acc2 INT;
-    DECLARE proj INT;
-    DECLARE dept INT;
-    DECLARE supp INT;
-    DECLARE dSeq INT;
-    DECLARE cSeq INT;
-
-    SET trnDate = CURDATE();
-
-    WHILE i <= headerCount DO
-        -- generate reference and ensure uniqueness within the table
-        gen_ref: LOOP
-            SET refNo = CONCAT('CR-', DATE_FORMAT(trnDate, '%Y%m%d'), '-', LPAD(FLOOR(RAND()*999999)+1, 6, '0'));
-            IF NOT EXISTS (SELECT 1 FROM transactions WHERE reference_no = refNo) THEN
-                LEAVE gen_ref;
-            END IF;
-        END LOOP gen_ref;
-        -- choose two valid COA ids from existing rows (fallback to 1 and 2 if missing)
-        SELECT COALESCE(MIN(id),1) INTO acc1 FROM chart_of_accounts;
-        SELECT COALESCE(MAX(id),2) INTO acc2 FROM chart_of_accounts;
-        IF acc1 = acc2 THEN SET acc2 = acc1 + 1; END IF;
-
-        -- random project/department/supplier (nullable)
-        SELECT id INTO proj FROM projects ORDER BY RAND() LIMIT 1;
-        SELECT id INTO dept FROM departments ORDER BY RAND() LIMIT 1;
-        SELECT id INTO supp FROM suppliers ORDER BY RAND() LIMIT 1;
-
-        -- pick 2-5 distribution lines, ensure balanced
-        SET distCount = 2 + FLOOR(RAND()*4); -- 2..5
-        SET debitAmt = ROUND((100 + RAND()*4900), 2); -- 100..5000
-        SET creditAmt = debitAmt; -- start balanced; additional lines will split amounts
-
-        -- create header
-        INSERT INTO transactions (
-            transaction_type, payment_form, reference_no, transaction_date,
-            amount, account_id, created_by, created_at, project_id, department_id
-        ) VALUES (
-            'cash_receipt', 'cash', refNo, trnDate, debitAmt, acc1, 1, NOW(), proj, dept
-        );
-        SET headerId = LAST_INSERT_ID();
-        SET dSeq = 1;
-        SET cSeq = 1;
-
-        -- first pair (debit on acc1, credit on acc2)
-        INSERT INTO transactions (parent_transaction_id, transaction_type, reference_no, transaction_date,
-                                  amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at)
-        VALUES (headerId, 'debit', CONCAT(refNo,'-D', LPAD(dSeq,3,'0')), trnDate,
-                debitAmt, acc1, supp, proj, dept, 'Seed debit', 1, NOW());
-        SET dSeq = dSeq + 1;
-
-        INSERT INTO transactions (parent_transaction_id, transaction_type, reference_no, transaction_date,
-                                  amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at)
-        VALUES (headerId, 'credit', CONCAT(refNo,'-C', LPAD(cSeq,3,'0')), trnDate,
-                creditAmt, acc2, supp, proj, dept, 'Seed credit', 1, NOW());
-        SET cSeq = cSeq + 1;
-
-        -- optional extra balanced lines (in pairs)
-        WHILE distCount > 2 DO
-            SET debitAmt = ROUND((50 + RAND()*2000), 2);
-            SET creditAmt = debitAmt;
-            INSERT INTO transactions (parent_transaction_id, transaction_type, reference_no, transaction_date,
-                                      amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at)
-            VALUES (headerId, 'debit', CONCAT(refNo,'-D', LPAD(dSeq,3,'0')), trnDate,
-                    debitAmt, acc1, supp, proj, dept, 'Seed debit', 1, NOW());
-            SET dSeq = dSeq + 1;
-            INSERT INTO transactions (parent_transaction_id, transaction_type, reference_no, transaction_date,
-                                      amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at)
-            VALUES (headerId, 'credit', CONCAT(refNo,'-C', LPAD(cSeq,3,'0')), trnDate,
-                    creditAmt, acc2, supp, proj, dept, 'Seed credit', 1, NOW());
-            SET cSeq = cSeq + 1;
-            SET distCount = distCount - 1;
-        END WHILE;
-
-        SET i = i + 1;
-    END WHILE;
-END $$
-DELIMITER ;
-
--- To seed 1000 cash receipts, run:
--- CALL seed_cash_receipts(1000);
-
--- Seed sample cash disbursement data (headers with balanced distribution)
-DELIMITER $$
-DROP PROCEDURE IF EXISTS seed_cash_disbursements $$
-CREATE PROCEDURE seed_cash_disbursements(IN headerCount INT)
-BEGIN
-    DECLARE i INT DEFAULT 1;
-    DECLARE headerId INT;
-    DECLARE trnDate DATE;
-    DECLARE refNo VARCHAR(50);
-    DECLARE debitAmt DECIMAL(15,2);
-    DECLARE creditAmt DECIMAL(15,2);
-    DECLARE accCash INT;     -- cash / bank account
-    DECLARE accExpense INT;  -- expense/payable account
-    DECLARE proj INT;
-    DECLARE dept INT;
-    DECLARE supp INT;
-    DECLARE dSeq INT;
-    DECLARE cSeq INT;
-
-    SET trnDate = CURDATE();
-
-    WHILE i <= headerCount DO
-        -- generate unique voucher/reference (CV-YYYYMMDD-######)
-        gen_ref: LOOP
-            SET refNo = CONCAT('CV-', DATE_FORMAT(trnDate, '%Y%m%d'), '-', LPAD(FLOOR(RAND()*999999)+1, 6, '0'));
-            IF NOT EXISTS (SELECT 1 FROM transactions WHERE reference_no = refNo) THEN
-                LEAVE gen_ref;
-            END IF;
-        END LOOP gen_ref;
-
-        -- choose two valid COA ids (fallbacks)
-        SELECT COALESCE(MIN(id),1) INTO accCash FROM chart_of_accounts;
-        SELECT COALESCE(MAX(id),2) INTO accExpense FROM chart_of_accounts;
-        IF accCash = accExpense THEN SET accExpense = accCash + 1; END IF;
-
-        -- random project/department/supplier
-        SELECT id INTO proj FROM projects ORDER BY RAND() LIMIT 1;
-        SELECT id INTO dept FROM departments ORDER BY RAND() LIMIT 1;
-        SELECT id INTO supp FROM suppliers ORDER BY RAND() LIMIT 1;
-
-        -- disbursement total
-        SET debitAmt = ROUND((100 + RAND()*4900), 2);
-        SET creditAmt = debitAmt; -- total must balance
-
-        -- header (cash_disbursement)
-        INSERT INTO transactions (
-            transaction_type, payment_form, reference_no, transaction_date,
-            amount, account_id, payee_name, created_by, created_at, project_id, department_id
-        ) VALUES (
-            'cash_disbursement', 'cash', refNo, trnDate, debitAmt, accCash,
-            'Seed Payee', 1, NOW(), proj, dept
-        );
-        SET headerId = LAST_INSERT_ID();
-        SET dSeq = 1; SET cSeq = 1;
-
-        -- debit line (expense)
-        INSERT INTO transactions (
-            parent_transaction_id, transaction_type, reference_no, transaction_date,
-            amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at
-        ) VALUES (
-            headerId, 'debit', CONCAT(refNo,'-D', LPAD(dSeq,3,'0')), trnDate,
-            debitAmt, accExpense, supp, proj, dept, 'Seed debit (expense)', 1, NOW()
-        );
-        SET dSeq = dSeq + 1;
-
-        -- credit line (cash)
-        INSERT INTO transactions (
-            parent_transaction_id, transaction_type, reference_no, transaction_date,
-            amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at
-        ) VALUES (
-            headerId, 'credit', CONCAT(refNo,'-C', LPAD(cSeq,3,'0')), trnDate,
-            creditAmt, accCash, supp, proj, dept, 'Seed credit (cash)', 1, NOW()
-        );
-        SET cSeq = cSeq + 1;
-
-        SET i = i + 1;
-    END WHILE;
-END $$
-DELIMITER ;
-
--- To seed 100 check disbursements, run:
--- CALL seed_cash_disbursements(100);
-
--- Seed sample check disbursement data (headers with balanced distribution)
-DELIMITER $$
-DROP PROCEDURE IF EXISTS seed_check_disbursements $$
-CREATE PROCEDURE seed_check_disbursements(IN headerCount INT)
-BEGIN
-    DECLARE i INT DEFAULT 1;
-    DECLARE headerId INT;
-    DECLARE trnDate DATE;
-    DECLARE refNo VARCHAR(50);
-    DECLARE debitAmt DECIMAL(15,2);
-    DECLARE creditAmt DECIMAL(15,2);
-    DECLARE accBank INT;
-    DECLARE accExpense INT;
-    DECLARE proj INT;
-    DECLARE dept INT;
-    DECLARE supp INT;
-    DECLARE dSeq INT;
-    DECLARE cSeq INT;
-
-    SET trnDate = CURDATE();
-
-    WHILE i <= headerCount DO
-        -- unique reference CV-YYYYMMDD-######
-        gen_ref2: LOOP
-            SET refNo = CONCAT('CV-', DATE_FORMAT(trnDate, '%Y%m%d'), '-', LPAD(FLOOR(RAND()*999999)+1, 6, '0'));
-            IF NOT EXISTS (SELECT 1 FROM transactions WHERE reference_no = refNo) THEN
-                LEAVE gen_ref2;
-            END IF;
-        END LOOP gen_ref2;
-
-        -- pick two chart of account ids
-        SELECT COALESCE(MIN(id),1) INTO accBank FROM chart_of_accounts;
-        SELECT COALESCE(MAX(id),2) INTO accExpense FROM chart_of_accounts;
-        IF accBank = accExpense THEN SET accExpense = accBank + 1; END IF;
-
-        -- random dimensions
-        SELECT id INTO proj FROM projects ORDER BY RAND() LIMIT 1;
-        SELECT id INTO dept FROM departments ORDER BY RAND() LIMIT 1;
-        SELECT id INTO supp FROM suppliers ORDER BY RAND() LIMIT 1;
-
-        SET debitAmt = ROUND((100 + RAND()*4900), 2);
-        SET creditAmt = debitAmt;
-
-        -- header (check_disbursement)
-        INSERT INTO transactions (
-            transaction_type, payment_form, reference_no, transaction_date,
-            amount, account_id, payee_name, check_number, bank, created_by, created_at,
-            project_id, department_id
-        ) VALUES (
-            'check_disbursement', 'check', refNo, trnDate, debitAmt, accBank,
-            'Seed Check Payee', CONCAT('CHK', LPAD(FLOOR(RAND()*99999)+1,5,'0')), 'Seed Bank', 1, NOW(),
-            proj, dept
-        );
-        SET headerId = LAST_INSERT_ID();
-        SET dSeq = 1; SET cSeq = 1;
-
-        -- debit (expense)
-        INSERT INTO transactions (
-            parent_transaction_id, transaction_type, reference_no, transaction_date,
-            amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at
-        ) VALUES (
-            headerId, 'debit', CONCAT(refNo,'-D', LPAD(dSeq,3,'0')), trnDate,
-            debitAmt, accExpense, supp, proj, dept, 'Seed check debit', 1, NOW()
-        );
-        SET dSeq = dSeq + 1;
-
-        -- credit (bank)
-        INSERT INTO transactions (
-            parent_transaction_id, transaction_type, reference_no, transaction_date,
-            amount, account_id, supplier_id, project_id, department_id, description, created_by, created_at
-        ) VALUES (
-            headerId, 'credit', CONCAT(refNo,'-C', LPAD(cSeq,3,'0')), trnDate,
-            creditAmt, accBank, supp, proj, dept, 'Seed check credit', 1, NOW()
-        );
-        SET cSeq = cSeq + 1;
-
-        SET i = i + 1;
-    END WHILE;
-END $$
-DELIMITER ;
-
--- To seed 100 check disbursements, run:
--- CALL seed_check_disbursements(100);
 
 -- Add audit trail table
 CREATE TABLE audit_trail (
@@ -613,4 +301,372 @@ CREATE TABLE IF NOT EXISTS notifications (
     CONSTRAINT fk_notifications_user FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-ALTER TABLE `transactions` MODIFY transaction_type enum('cash_receipt','cash_disbursement','check_disbursement') NOT NULL
+-- Separate Books Migration Script
+-- Convert unified transaction tables to book-specific tables
+-- Step 1: Create new book-specific tables
+
+-- Cash Receipts
+CREATE TABLE IF NOT EXISTS cash_receipts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reference_no VARCHAR(50) UNIQUE NOT NULL,
+    transaction_date DATE NOT NULL,
+    total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    description TEXT,
+    payment_form ENUM('cash', 'check', 'bank_transfer') DEFAULT 'cash',
+    check_number VARCHAR(50),
+    bank VARCHAR(100),
+    payee_name VARCHAR(255),
+    billing_number VARCHAR(50),
+    return_reason TEXT,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS cash_receipt_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cash_receipt_id INT NOT NULL,
+    account_id INT NOT NULL,
+    project_id INT,
+    department_id INT,
+    supplier_id INT,
+    transaction_type ENUM('debit', 'credit') NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cash_receipt_id) REFERENCES cash_receipts(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+-- Cash Disbursements
+CREATE TABLE IF NOT EXISTS cash_disbursements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reference_no VARCHAR(50) UNIQUE NOT NULL,
+    transaction_date DATE NOT NULL,
+    total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    description TEXT,
+    supplier_id INT,
+    project_id INT,
+    department_id INT,
+    payment_form ENUM('cash', 'check') DEFAULT 'cash',
+    payee_name VARCHAR(255),
+    po_number VARCHAR(50),
+    cwo_number VARCHAR(50),
+    return_reason TEXT,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS cash_disbursement_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cash_disbursement_id INT NOT NULL,
+    account_id INT NOT NULL,
+    project_id INT,
+    department_id INT,
+    supplier_id INT,
+    transaction_type ENUM('debit', 'credit') NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cash_disbursement_id) REFERENCES cash_disbursements(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+-- Check Disbursements
+CREATE TABLE IF NOT EXISTS check_disbursements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reference_no VARCHAR(50) UNIQUE NOT NULL,
+    transaction_date DATE NOT NULL,
+    total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    description TEXT,
+    supplier_id INT,
+    project_id INT,
+    department_id INT,
+    check_number VARCHAR(50),
+    bank VARCHAR(100),
+    check_date DATE,
+    payee_name VARCHAR(255),
+    po_number VARCHAR(50),
+    cwo_number VARCHAR(50),
+    ebr_number VARCHAR(50),
+    return_reason TEXT,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS check_disbursement_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    check_disbursement_id INT NOT NULL,
+    account_id INT NOT NULL,
+    project_id INT,
+    department_id INT,
+    supplier_id INT,
+    transaction_type ENUM('debit', 'credit') NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (check_disbursement_id) REFERENCES check_disbursements(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+-- Step 2: Create indexes for better performance
+CREATE INDEX idx_cash_receipts_date ON cash_receipts(transaction_date);
+CREATE INDEX idx_cash_receipts_status ON cash_receipts(status);
+CREATE INDEX idx_cash_receipts_reference ON cash_receipts(reference_no);
+CREATE INDEX idx_cash_receipt_details_receipt ON cash_receipt_details(cash_receipt_id);
+CREATE INDEX idx_cash_receipt_details_account ON cash_receipt_details(account_id);
+CREATE INDEX idx_cash_receipt_details_type ON cash_receipt_details(transaction_type);
+
+CREATE INDEX idx_cash_disbursements_date ON cash_disbursements(transaction_date);
+CREATE INDEX idx_cash_disbursements_status ON cash_disbursements(status);
+CREATE INDEX idx_cash_disbursements_reference ON cash_disbursements(reference_no);
+CREATE INDEX idx_cash_disbursements_supplier ON cash_disbursements(supplier_id);
+CREATE INDEX idx_cash_disbursement_details_disbursement ON cash_disbursement_details(cash_disbursement_id);
+CREATE INDEX idx_cash_disbursement_details_account ON cash_disbursement_details(account_id);
+CREATE INDEX idx_cash_disbursement_details_type ON cash_disbursement_details(transaction_type);
+
+CREATE INDEX idx_check_disbursements_date ON check_disbursements(transaction_date);
+CREATE INDEX idx_check_disbursements_status ON check_disbursements(status);
+CREATE INDEX idx_check_disbursements_reference ON check_disbursements(reference_no);
+CREATE INDEX idx_check_disbursements_supplier ON check_disbursements(supplier_id);
+CREATE INDEX idx_check_disbursement_details_disbursement ON check_disbursement_details(check_disbursement_id);
+CREATE INDEX idx_check_disbursement_details_account ON check_disbursement_details(account_id);
+CREATE INDEX idx_check_disbursement_details_type ON check_disbursement_details(transaction_type);
+
+-- Journal Entries Header
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reference_no VARCHAR(50) UNIQUE NOT NULL,
+    transaction_date DATE NOT NULL,
+    description TEXT,
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    jv_status ENUM('active', 'inactive') DEFAULT 'active',
+    for_posting ENUM('for_checking', 'for_posting') DEFAULT 'for_checking',
+    reference_number1 VARCHAR(50),
+    reference_number2 VARCHAR(50),
+    cwo_number VARCHAR(50),
+    bill_invoice_ref VARCHAR(50),
+    rejection_reason TEXT,
+    created_by INT,
+    approved_by INT,
+    rejected_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_at TIMESTAMP NULL,
+    rejected_at TIMESTAMP NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (approved_by) REFERENCES users(id),
+    FOREIGN KEY (rejected_by) REFERENCES users(id)
+);
+
+-- Journal Entry Details
+CREATE TABLE IF NOT EXISTS journal_entry_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    journal_entry_id INT NOT NULL,
+    account_id INT NOT NULL,
+    project_id INT,
+    department_id INT,
+    supplier_id INT,
+    transaction_type ENUM('debit', 'credit') NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (journal_entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id) REFERENCES chart_of_accounts(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+-- Create indexes for journal entries (if they don't exist)
+CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_status ON journal_entries(status);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_jv_status ON journal_entries(jv_status);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_for_posting ON journal_entries(for_posting);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_reference ON journal_entries(reference_no);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_details_entry ON journal_entry_details(journal_entry_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_details_account ON journal_entry_details(account_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_details_type ON journal_entry_details(transaction_type);
+
+-- Create view for journal entry summaries (drop if exists first)
+DROP VIEW IF EXISTS v_journal_entry_summaries;
+CREATE VIEW v_journal_entry_summaries AS
+SELECT 
+    je.id,
+    je.reference_no,
+    je.transaction_date,
+    je.description,
+    je.total_amount,
+    je.status,
+    je.jv_status,
+    je.for_posting,
+    je.reference_number1,
+    je.bill_invoice_ref,
+    je.created_at,
+    je.approved_at,
+    je.rejected_at,
+    u_created.username as created_by_username,
+    u_created.full_name as created_by_full_name,
+    u_approved.full_name as approved_by_full_name,
+    u_rejected.full_name as rejected_by_full_name
+FROM journal_entries je
+LEFT JOIN users u_created ON je.created_by = u_created.id
+LEFT JOIN users u_approved ON je.approved_by = u_approved.id
+LEFT JOIN users u_rejected ON je.rejected_by = u_rejected.id
+ORDER BY je.transaction_date DESC, je.id DESC;
+
+-- Create view for journal entry details with account information (drop if exists first)
+DROP VIEW IF EXISTS v_journal_entry_details;
+CREATE VIEW v_journal_entry_details AS
+SELECT 
+    jed.id,
+    jed.journal_entry_id,
+    je.reference_no,
+    je.transaction_date,
+    jed.account_id,
+    coa.account_code,
+    coa.account_name,
+    cat.type_name as account_type,
+    jed.amount,
+    jed.transaction_type,
+    jed.description,
+    jed.project_id,
+    p.project_name,
+    jed.department_id,
+    d.department_name,
+    jed.supplier_id,
+    s.supplier_name,
+    je.created_by,
+    u.full_name as created_by_name,
+    je.created_at
+FROM journal_entry_details jed
+JOIN journal_entries je ON jed.journal_entry_id = je.id
+JOIN chart_of_accounts coa ON jed.account_id = coa.id
+JOIN coa_account_types cat ON coa.account_type_id = cat.id
+LEFT JOIN projects p ON jed.project_id = p.id
+LEFT JOIN departments d ON jed.department_id = d.id
+LEFT JOIN suppliers s ON jed.supplier_id = s.id
+LEFT JOIN users u ON je.created_by = u.id;
+
+
+-- Step 4: Create views for unified reporting (optional)
+DROP VIEW IF EXISTS v_all_transactions;
+CREATE VIEW v_all_transactions AS
+SELECT 
+    'cash_receipt' as transaction_type,
+    id,
+    reference_no,
+    transaction_date,
+    total_amount,
+    description,
+    status,
+    created_by,
+    created_at
+FROM cash_receipts
+UNION ALL
+SELECT 
+    'cash_disbursement' as transaction_type,
+    id,
+    reference_no,
+    transaction_date,
+    total_amount,
+    description,
+    status,
+    created_by,
+    created_at
+FROM cash_disbursements
+UNION ALL
+SELECT 
+    'check_disbursement' as transaction_type,
+    id,
+    reference_no,
+    transaction_date,
+    total_amount,
+    description,
+    status,
+    created_by,
+    created_at
+FROM check_disbursements
+UNION ALL
+SELECT 
+    'journal_entry' as transaction_type,
+    id,
+    reference_no,
+    transaction_date,
+    total_amount,
+    description,
+    status,
+    created_by,
+    created_at
+FROM journal_entries
+ORDER BY transaction_date DESC, id DESC;
+
+-- Step 5: Create unified account balance view
+DROP VIEW IF EXISTS v_unified_account_balances;
+CREATE VIEW v_unified_account_balances AS
+SELECT 
+    coa.id as account_id,
+    coa.account_code,
+    coa.account_name,
+    cat.type_name as account_type,
+    COALESCE(SUM(CASE WHEN crd.transaction_type = 'debit' THEN crd.amount ELSE 0 END), 0) +
+    COALESCE(SUM(CASE WHEN cdd.transaction_type = 'debit' THEN cdd.amount ELSE 0 END), 0) +
+    COALESCE(SUM(CASE WHEN chdd.transaction_type = 'debit' THEN chdd.amount ELSE 0 END), 0) +
+    COALESCE(SUM(CASE WHEN jed.transaction_type = 'debit' THEN jed.amount ELSE 0 END), 0) as total_debits,
+    COALESCE(SUM(CASE WHEN crd.transaction_type = 'credit' THEN crd.amount ELSE 0 END), 0) +
+    COALESCE(SUM(CASE WHEN cdd.transaction_type = 'credit' THEN cdd.amount ELSE 0 END), 0) +
+    COALESCE(SUM(CASE WHEN chdd.transaction_type = 'credit' THEN chdd.amount ELSE 0 END), 0) +
+    COALESCE(SUM(CASE WHEN jed.transaction_type = 'credit' THEN jed.amount ELSE 0 END), 0) as total_credits,
+    CASE 
+        WHEN cat.type_name IN ('Asset', 'Expense') THEN 
+            (COALESCE(SUM(CASE WHEN crd.transaction_type = 'debit' THEN crd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN cdd.transaction_type = 'debit' THEN cdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN chdd.transaction_type = 'debit' THEN chdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN jed.transaction_type = 'debit' THEN jed.amount ELSE 0 END), 0)) -
+            (COALESCE(SUM(CASE WHEN crd.transaction_type = 'credit' THEN crd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN cdd.transaction_type = 'credit' THEN cdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN chdd.transaction_type = 'credit' THEN chdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN jed.transaction_type = 'credit' THEN jed.amount ELSE 0 END), 0))
+        ELSE 
+            (COALESCE(SUM(CASE WHEN crd.transaction_type = 'credit' THEN crd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN cdd.transaction_type = 'credit' THEN cdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN chdd.transaction_type = 'credit' THEN chdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN jed.transaction_type = 'credit' THEN jed.amount ELSE 0 END), 0)) -
+            (COALESCE(SUM(CASE WHEN crd.transaction_type = 'debit' THEN crd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN cdd.transaction_type = 'debit' THEN cdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN chdd.transaction_type = 'debit' THEN chdd.amount ELSE 0 END), 0) +
+             COALESCE(SUM(CASE WHEN jed.transaction_type = 'debit' THEN jed.amount ELSE 0 END), 0))
+    END as balance
+FROM chart_of_accounts coa
+LEFT JOIN coa_account_types cat ON coa.account_type_id = cat.id
+LEFT JOIN cash_receipt_details crd ON coa.id = crd.account_id
+LEFT JOIN cash_disbursement_details cdd ON coa.id = cdd.account_id
+LEFT JOIN check_disbursement_details chdd ON coa.id = chdd.account_id
+LEFT JOIN journal_entry_details jed ON coa.id = jed.account_id
+WHERE coa.status = 'active'
+GROUP BY coa.id, coa.account_code, coa.account_name, cat.type_name;
+

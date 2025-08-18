@@ -374,5 +374,110 @@ class JournalEntryModel extends Model {
         
         return $journalEntries;
     }
+    
+    /**
+     * Get data for server-side DataTable processing within fiscal year
+     */
+    public function getDataTableData($start, $length, $search, $orderBy, $orderDir) {
+        try {
+            error_log("Journal Entry getDataTableData called with: start=$start, length=$length, search='$search', orderBy='$orderBy', orderDir='$orderDir'");
+            
+            // Get fiscal year dates
+            $fiscalYear = $this->getFiscalYearDates();
+            
+            // Base query with fiscal year filter
+            $baseQuery = "FROM journal_entries je
+                         LEFT JOIN users u ON je.created_by = u.id
+                         WHERE je.transaction_date >= ? AND je.transaction_date <= ?";
+            
+            // Search condition
+            $searchCondition = "";
+            $searchParams = [$fiscalYear['start'], $fiscalYear['end']];
+            
+            if (!empty($search)) {
+                $searchCondition = " AND (je.reference_no LIKE ? OR je.description LIKE ? OR je.status LIKE ? OR je.jv_status LIKE ?)";
+                $searchTerm = "%{$search}%";
+                $searchParams = array_merge($searchParams, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+            }
+            
+            // Count total records within fiscal year
+            $countSql = "SELECT COUNT(*) as total " . $baseQuery;
+            $countStmt = $this->db->prepare($countSql);
+            $countStmt->execute([$fiscalYear['start'], $fiscalYear['end']]);
+            $totalRecords = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            
+            // Count filtered records
+            $filteredSql = "SELECT COUNT(*) as total " . $baseQuery . $searchCondition;
+            $filteredStmt = $this->db->prepare($filteredSql);
+            $filteredStmt->execute($searchParams);
+            $filteredRecords = $filteredStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            
+            // Get data
+            $dataSql = "SELECT je.id, je.reference_no, je.transaction_date, je.total_amount,
+                               je.description, je.status, je.jv_status, je.for_posting,
+                               je.created_at, u.full_name as created_by_name
+                        " . $baseQuery . $searchCondition . "
+                        ORDER BY {$orderBy} {$orderDir}
+                        LIMIT {$start}, {$length}";
+            
+            $dataStmt = $this->db->prepare($dataSql);
+            $dataStmt->execute($searchParams);
+            $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            error_log("Journal Entry DataTable query executed. Found " . count($data) . " records. Total: $totalRecords, Filtered: $filteredRecords");
+            
+            // Format data for DataTable
+            $formattedData = [];
+            foreach ($data as $row) {
+                // Format date
+                $formattedDate = date('M d, Y', strtotime($row['transaction_date']));
+                
+                // Format amount
+                $formattedAmount = '₱' . number_format($row['total_amount'], 2);
+                
+                // Format status badge
+                $statusClass = 'bg-secondary';
+                $status = $row['status'] ?? 'Pending';
+                
+                switch ($status) {
+                    case 'approved':
+                        $statusClass = 'bg-success';
+                        break;
+                    case 'rejected':
+                        $statusClass = 'bg-danger';
+                        break;
+                    case 'pending':
+                    default:
+                        $statusClass = 'bg-secondary';
+                        break;
+                }
+                
+                $formattedData[] = [
+                    $formattedDate,
+                    '<span class="badge bg-info">' . htmlspecialchars($row['reference_no']) . '</span>',
+                    '<span class="text-end">' . $formattedAmount . '</span>',
+                    '<span class="badge ' . $statusClass . '">' . htmlspecialchars(ucfirst($status)) . '</span>',
+                    '<button type="button" class="btn btn-sm btn-outline-primary view-journal-entry-btn" data-entry-id="' . $row['id'] . '"><i class="bi bi-eye"></i> View</button>'
+                ];
+            }
+            
+            $result = [
+                'totalRecords' => (int)$totalRecords,
+                'filteredRecords' => (int)$filteredRecords,
+                'data' => $formattedData
+            ];
+            
+            error_log("Journal Entry DataTable result: " . json_encode($result));
+            return $result;
+            
+        } catch (Exception $e) {
+            error_log('Error getting Journal Entry DataTable data: ' . $e->getMessage());
+            return [
+                'totalRecords' => 0,
+                'filteredRecords' => 0,
+                'data' => []
+            ];
+        }
+    }
 }
 ?> 

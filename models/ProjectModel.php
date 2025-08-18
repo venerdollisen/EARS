@@ -50,7 +50,9 @@ class ProjectModel extends Model {
     
     public function deleteProject($id) {
         // Check if project is being used in transactions
-        $sql = "SELECT COUNT(*) as count FROM transactions WHERE project_id = ?";
+        $sql = "SELECT COUNT(*) as count FROM transaction_distributions td 
+                JOIN transaction_headers th ON td.header_id = th.id 
+                WHERE td.project_id = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -94,6 +96,21 @@ class ProjectModel extends Model {
         }
         
         return $errors;
+    }
+
+    /**
+     * Check if project has transactions
+     */
+    public function hasTransactions($projectId) {
+        try {
+            $sql = "SELECT COUNT(*) FROM transaction_headers WHERE project_id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$projectId]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Exception $e) {
+            error_log('Error checking project transactions: ' . $e->getMessage());
+            return false;
+        }
     }
 }
 ?> 

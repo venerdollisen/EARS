@@ -50,7 +50,9 @@ class DepartmentModel extends Model {
     
     public function deleteDepartment($id) {
         // Check if department is being used in transactions
-        $sql = "SELECT COUNT(*) as count FROM transactions WHERE department_id = ?";
+        $sql = "SELECT COUNT(*) as count FROM transaction_distributions td 
+                JOIN transaction_headers th ON td.header_id = th.id 
+                WHERE td.department_id = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$id]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -94,6 +96,21 @@ class DepartmentModel extends Model {
         }
         
         return $errors;
+    }
+
+    /**
+     * Check if department has transactions
+     */
+    public function hasTransactions($departmentId) {
+        try {
+            $sql = "SELECT COUNT(*) FROM transaction_headers WHERE department_id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$departmentId]);
+            return (bool)$stmt->fetchColumn();
+        } catch (Exception $e) {
+            error_log('Error checking department transactions: ' . $e->getMessage());
+            return false;
+        }
     }
 }
 ?> 

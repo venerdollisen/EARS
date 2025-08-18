@@ -148,9 +148,44 @@ class SettingsController extends Controller {
         try {
             $user = $this->auth->getCurrentUser();
             
-            // Verify current password
-            if (!password_verify($data['current_password'], $user['password'])) {
+            // Get the actual user data from database to access the password hash
+            $sql = "SELECT password FROM users WHERE id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$user['id']]);
+            $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$userData) {
+                $this->jsonResponse(['error' => 'User not found'], 404);
+            }
+            
+            // Verify current password with backward compatibility
+            $currentPasswordValid = false;
+            
+            // Try new method first (with salt)
+            if ($this->auth->verifyPassword($data['current_password'], $userData['password'])) {
+                $currentPasswordValid = true;
+            }
+            // Try old method (without salt) for backward compatibility
+            else if (password_verify($data['current_password'], $userData['password'])) {
+                $currentPasswordValid = true;
+                // Upgrade the password to new format
+                $this->upgradeUserPassword($user['id'], $data['current_password']);
+            }
+            
+            if (!$currentPasswordValid) {
                 $this->jsonResponse(['error' => 'Current password is incorrect'], 400);
+            }
+            
+            // Check if new password is different from current password
+            $newPasswordSameAsCurrent = false;
+            if ($this->auth->verifyPassword($data['new_password'], $userData['password'])) {
+                $newPasswordSameAsCurrent = true;
+            } else if (password_verify($data['new_password'], $userData['password'])) {
+                $newPasswordSameAsCurrent = true;
+            }
+            
+            if ($newPasswordSameAsCurrent) {
+                $this->jsonResponse(['error' => 'New password must be different from current password'], 400);
             }
             
             // Check if new passwords match
@@ -163,8 +198,21 @@ class SettingsController extends Controller {
                 $this->jsonResponse(['error' => 'Password must be at least 8 characters long'], 400);
             }
             
-            // Hash new password
-            $hashedPassword = password_hash($data['new_password'], PASSWORD_DEFAULT);
+            // Additional password strength validation
+            if (!preg_match('/[a-z]/', $data['new_password'])) {
+                $this->jsonResponse(['error' => 'Password must contain at least one lowercase letter'], 400);
+            }
+            
+            if (!preg_match('/[A-Z]/', $data['new_password'])) {
+                $this->jsonResponse(['error' => 'Password must contain at least one uppercase letter'], 400);
+            }
+            
+            if (!preg_match('/[0-9]/', $data['new_password'])) {
+                $this->jsonResponse(['error' => 'Password must contain at least one number'], 400);
+            }
+            
+            // Hash new password using the Auth class method
+            $hashedPassword = $this->auth->hashPassword($data['new_password']);
             
             // Update password
             $sql = "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?";
@@ -178,6 +226,19 @@ class SettingsController extends Controller {
             }
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to change password: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    private function upgradeUserPassword($userId, $password) {
+        try {
+            $newHash = $this->auth->hashPassword($password);
+            
+            $sql = "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$newHash, $userId]);
+        } catch (Exception $e) {
+            // Log error but don't fail the operation
+            error_log("Failed to upgrade password for user ID {$userId}: " . $e->getMessage());
         }
     }
     

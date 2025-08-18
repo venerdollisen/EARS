@@ -10,6 +10,10 @@ class Router {
         $requestUri = $_SERVER['REQUEST_URI'];
         $path = parse_url($requestUri, PHP_URL_PATH);
         
+        // Debug: Log the original request
+        error_log("Router Debug: Original Request URI: $requestUri");
+        error_log("Router Debug: Parsed Path: $path");
+        
         // Remove base path if exists
         $basePath = dirname($_SERVER['SCRIPT_NAME']);
         if ($basePath !== '/') {

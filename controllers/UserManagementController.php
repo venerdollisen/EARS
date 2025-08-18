@@ -52,9 +52,29 @@ class UserManagementController extends Controller {
                 'role' => $data['role'] ?? 'user',
                 'status' => $data['status'] ?? 'active'
             ];
+            
+            // Validate required fields
             if (!$payload['username'] || !$payload['password']) {
                 $this->jsonResponse(['error' => 'Username and password are required'], 400);
             }
+            
+            // Validate password strength
+            if (strlen($payload['password']) < 8) {
+                $this->jsonResponse(['error' => 'Password must be at least 8 characters long'], 400);
+            }
+            
+            if (!preg_match('/[a-z]/', $payload['password'])) {
+                $this->jsonResponse(['error' => 'Password must contain at least one lowercase letter'], 400);
+            }
+            
+            if (!preg_match('/[A-Z]/', $payload['password'])) {
+                $this->jsonResponse(['error' => 'Password must contain at least one uppercase letter'], 400);
+            }
+            
+            if (!preg_match('/[0-9]/', $payload['password'])) {
+                $this->jsonResponse(['error' => 'Password must contain at least one number'], 400);
+            }
+            
             $id = $userModel->createUser($payload);
             $this->jsonResponse(['success' => true, 'id' => $id]);
         } catch (Exception $e) {
@@ -77,9 +97,30 @@ class UserManagementController extends Controller {
                 'role' => $data['role'] ?? 'user',
                 'status' => $data['status'] ?? 'active'
             ];
+            
             if (!$payload['username']) {
                 $this->jsonResponse(['error' => 'Username is required'], 400);
             }
+            
+            // Validate password strength if password is provided
+            if (!empty($payload['password'])) {
+                if (strlen($payload['password']) < 8) {
+                    $this->jsonResponse(['error' => 'Password must be at least 8 characters long'], 400);
+                }
+                
+                if (!preg_match('/[a-z]/', $payload['password'])) {
+                    $this->jsonResponse(['error' => 'Password must contain at least one lowercase letter'], 400);
+                }
+                
+                if (!preg_match('/[A-Z]/', $payload['password'])) {
+                    $this->jsonResponse(['error' => 'Password must contain at least one uppercase letter'], 400);
+                }
+                
+                if (!preg_match('/[0-9]/', $payload['password'])) {
+                    $this->jsonResponse(['error' => 'Password must contain at least one number'], 400);
+                }
+            }
+            
             $ok = $userModel->updateUser((int)$id, $payload);
             $this->jsonResponse(['success' => (bool)$ok]);
         } catch (Exception $e) {

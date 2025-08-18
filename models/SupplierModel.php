@@ -102,5 +102,69 @@ class SupplierModel extends Model {
             'balance' => $result['credits'] - $result['debits']
         ];
     }
+
+    /**
+     * Get supplier transaction summary
+     */
+    public function getTransactionSummary($supplierId, $dateFrom = null, $dateTo = null) {
+        try {
+            $sql = "SELECT 
+                        COUNT(*) as transaction_count,
+                        COALESCE(SUM(total_amount), 0) as total_amount,
+                        MIN(transaction_date) as first_transaction,
+                        MAX(transaction_date) as last_transaction
+                    FROM transaction_headers 
+                    WHERE supplier_id = ?";
+            
+            $params = [$supplierId];
+            
+            if ($dateFrom && $dateTo) {
+                $sql .= " AND transaction_date BETWEEN ? AND ?";
+                $params[] = $dateFrom;
+                $params[] = $dateTo;
+            }
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log('Error getting supplier transaction summary: ' . $e->getMessage());
+            return [
+                'transaction_count' => 0,
+                'total_amount' => 0,
+                'first_transaction' => null,
+                'last_transaction' => null
+            ];
+        }
+    }
+    
+    /**
+     * Get supplier recent transactions
+     */
+    public function getRecentTransactions($supplierId, $limit = 10) {
+        try {
+            $sql = "SELECT 
+                        th.id,
+                        th.reference_no,
+                        th.transaction_type,
+                        th.transaction_date,
+                        th.total_amount,
+                        th.payment_status,
+                        th.status
+                    FROM transaction_headers th
+                    WHERE th.supplier_id = ?
+                    ORDER BY th.transaction_date DESC, th.id DESC
+                    LIMIT ?";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$supplierId, $limit]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log('Error getting supplier recent transactions: ' . $e->getMessage());
+            return [];
+        }
+    }
 }
 ?> 

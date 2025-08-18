@@ -86,14 +86,30 @@ $lastName = $nameParts[1] ?? '';
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="new_password" class="form-label">New Password</label>
-                                <input type="password" class="form-control" id="new_password" name="new_password" required>
-                                <small class="form-text text-muted">Minimum 8 characters</small>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="password-strength mt-2">
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar" id="passwordStrengthBar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small class="form-text text-muted" id="passwordStrengthText">Minimum 8 characters</small>
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="confirm_password" class="form-label">Confirm New Password</label>
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text" id="confirmPasswordText"></small>
                             </div>
                         </div>
                     </div>
@@ -245,9 +261,33 @@ function changePassword() {
         formData[item.name] = item.value;
     });
     
+    // Validate required fields
+    if (!formData.current_password || !formData.new_password || !formData.confirm_password) {
+        EARS.showAlert('All password fields are required', 'danger');
+        return;
+    }
+    
+    // Validate current password is not empty
+    if (formData.current_password.trim() === '') {
+        EARS.showAlert('Current password is required', 'danger');
+        return;
+    }
+    
+    // Validate new password length
+    if (formData.new_password.length < 8) {
+        EARS.showAlert('New password must be at least 8 characters long', 'danger');
+        return;
+    }
+    
     // Validate passwords match
     if (formData.new_password !== formData.confirm_password) {
         EARS.showAlert('New passwords do not match', 'danger');
+        return;
+    }
+    
+    // Validate new password is different from current password
+    if (formData.new_password === formData.current_password) {
+        EARS.showAlert('New password must be different from current password', 'danger');
         return;
     }
     
@@ -281,7 +321,88 @@ function changePassword() {
     });
 }
 
-// Auto-save profile form data
+// Password strength checker
+function checkPasswordStrength(password) {
+    let strength = 0;
+    let feedback = [];
+    
+    if (password.length >= 8) {
+        strength += 25;
+        feedback.push('Length ✓');
+    } else {
+        feedback.push('At least 8 characters');
+    }
+    
+    if (/[a-z]/.test(password)) {
+        strength += 25;
+        feedback.push('Lowercase ✓');
+    } else {
+        feedback.push('Lowercase letter');
+    }
+    
+    if (/[A-Z]/.test(password)) {
+        strength += 25;
+        feedback.push('Uppercase ✓');
+    } else {
+        feedback.push('Uppercase letter');
+    }
+    
+    if (/[0-9]/.test(password)) {
+        strength += 25;
+        feedback.push('Number ✓');
+    } else {
+        feedback.push('Number');
+    }
+    
+    return { strength, feedback };
+}
+
+// Update password strength indicator
+function updatePasswordStrength() {
+    const password = $('#new_password').val();
+    const { strength, feedback } = checkPasswordStrength(password);
+    
+    const bar = $('#passwordStrengthBar');
+    const text = $('#passwordStrengthText');
+    
+    bar.css('width', strength + '%');
+    
+    if (strength <= 25) {
+        bar.removeClass('bg-success bg-warning').addClass('bg-danger');
+        text.removeClass('text-success text-warning').addClass('text-danger');
+    } else if (strength <= 50) {
+        bar.removeClass('bg-success bg-danger').addClass('bg-warning');
+        text.removeClass('text-success text-danger').addClass('text-warning');
+    } else if (strength <= 75) {
+        bar.removeClass('bg-danger bg-warning').addClass('bg-info');
+        text.removeClass('text-danger text-warning').addClass('text-info');
+    } else {
+        bar.removeClass('bg-danger bg-warning bg-info').addClass('bg-success');
+        text.removeClass('text-danger text-warning text-info').addClass('text-success');
+    }
+    
+    text.text(feedback.join(', '));
+}
+
+// Check password confirmation
+function checkPasswordConfirmation() {
+    const password = $('#new_password').val();
+    const confirmPassword = $('#confirm_password').val();
+    const text = $('#confirmPasswordText');
+    
+    if (confirmPassword === '') {
+        text.removeClass('text-success text-danger').addClass('text-muted').text('');
+        return;
+    }
+    
+    if (password === confirmPassword) {
+        text.removeClass('text-danger text-muted').addClass('text-success').text('Passwords match ✓');
+    } else {
+        text.removeClass('text-success text-muted').addClass('text-danger').text('Passwords do not match');
+    }
+}
+
+// Auto-save profile form data and password validation
 $(document).ready(function() {
     $('#profileForm').on('change', 'input, select, textarea', function() {
         // Auto-save after 3 seconds of inactivity
@@ -289,6 +410,43 @@ $(document).ready(function() {
         window.autoSaveTimer = setTimeout(function() {
             saveProfile();
         }, 3000);
+    });
+    
+    // Password strength and confirmation validation
+    $('#new_password').on('input', function() {
+        updatePasswordStrength();
+        checkPasswordConfirmation();
+    });
+    
+    $('#confirm_password').on('input', function() {
+        checkPasswordConfirmation();
+    });
+    
+    // Password toggle functionality
+    $('#toggleNewPassword').on('click', function() {
+        const input = $('#new_password');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+    });
+    
+    $('#toggleConfirmPassword').on('click', function() {
+        const input = $('#confirm_password');
+        const icon = $(this).find('i');
+        
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
     });
 });
 </script> 

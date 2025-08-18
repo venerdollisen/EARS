@@ -103,5 +103,37 @@ class Model {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['count'];
     }
+    
+    /**
+     * Get fiscal year start and end dates from accounting parameters
+     * @return array ['start' => 'YYYY-MM-DD', 'end' => 'YYYY-MM-DD']
+     */
+    protected function getFiscalYearDates() {
+        try {
+            $sql = "SELECT 
+                    MAX(CASE WHEN parameter_name = 'fiscal_year_start' THEN parameter_value END) AS fy_start,
+                    MAX(CASE WHEN parameter_name = 'fiscal_year_end' THEN parameter_value END) AS fy_end
+                FROM accounting_parameters";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Default to current year if fiscal year not set
+            $fyStart = $result['fy_start'] ?: date('Y-01-01');
+            $fyEnd = $result['fy_end'] ?: date('Y-12-31');
+            
+            return [
+                'start' => $fyStart,
+                'end' => $fyEnd
+            ];
+        } catch (Exception $e) {
+            error_log('Error getting fiscal year dates: ' . $e->getMessage());
+            // Fallback to current year
+            return [
+                'start' => date('Y-01-01'),
+                'end' => date('Y-12-31')
+            ];
+        }
+    }
 }
 ?> 

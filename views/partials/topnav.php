@@ -18,10 +18,10 @@
                     <i class="bi bi-bell"></i>
                     <span class="badge bg-danger" id="notifCount" style="display:none;">0</span>
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end" style="min-width: 320px;" id="notifMenu">
-                    <li><h6 class="dropdown-header">Notifications</h6></li>
-                    <li><div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div></li>
-                </ul>
+                                 <ul class="dropdown-menu dropdown-menu-end" style="min-width: 320px; max-height: 400px; overflow-y: auto;" id="notifMenu">
+                     <li><h6 class="dropdown-header">Notifications</h6></li>
+                     <li><div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div></li>
+                 </ul>
             </li>
             
             <!-- User Profile -->
@@ -53,9 +53,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const countEl = document.getElementById('notifCount');
         const menu = document.getElementById('notifMenu');
         const empty = document.getElementById('notifEmpty');
-        if (items.length > 0) {
+        
+        // Filter to only show unread notifications
+        const unreadItems = items.filter(i => i.is_read === '0' || i.is_read === 0);
+        
+        if (unreadItems.length > 0) {
           empty && empty.remove();
-          items.forEach(n => {
+          unreadItems.forEach(n => {
             const li = document.createElement('li');
             li.innerHTML = `<a class="dropdown-item" href="#" data-id="${n.id}">${n.title}<br><small class="text-muted">${n.message}</small></a>`;
             menu.appendChild(li);
@@ -65,6 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
             a.addEventListener('click', (e) => {
               e.preventDefault();
               const id = a.getAttribute('data-id');
+              currentNotificationId = id; // Set the current notification ID
+              console.log('Notification clicked, setting currentNotificationId to:', id);
               fetch(APP_URL + '/api/notifications/view/' + id, { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
                 .then(async r => {
                   const text = await r.text();
@@ -76,10 +82,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
           });
+        } else {
+          // Show empty message if no unread notifications
+          if (!empty) {
+            const emptyDiv = document.createElement('li');
+            emptyDiv.innerHTML = '<div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div>';
+            menu.appendChild(emptyDiv);
+          }
         }
         if (count > 0) {
           countEl.textContent = count;
           countEl.style.display = '';
+        } else {
+          countEl.style.display = 'none';
         }
       }).catch(() => {});
 });
@@ -111,6 +126,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 let currentNotifTransactionId = null;
+let currentNotificationId = null; // Add this line to track the current notification ID
+let currentTransactionReference = null; // Add this line to track the current transaction reference number
+let currentTransactionType = null; // Add this line to store the transaction type
 
 // Custom alert function with guaranteed auto-dismiss
 function showAutoDismissAlert(message, type = 'info') {
@@ -189,11 +207,14 @@ function showAutoDismissAlert(message, type = 'info') {
 
 // Function to reload notification count
 function reloadNotificationCount() {
+  console.log('Reloading notification count...');
   fetch(APP_URL + '/api/notifications/count')
     .then(r => r.json())
     .then(resp => {
+      console.log('Notification count response:', resp);
       if (!resp || !resp.success) return;
       const count = resp.unread || 0;
+      console.log('New notification count:', count);
       const countEl = document.getElementById('notifCount');
       if (count > 0) {
         countEl.textContent = count;
@@ -201,7 +222,9 @@ function reloadNotificationCount() {
       } else {
         countEl.style.display = 'none';
       }
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Error reloading notification count:', error);
+    });
 }
 
 // Function to reload notification list
@@ -218,8 +241,11 @@ function reloadNotificationList() {
       const existingItems = menu.querySelectorAll('li:not(:first-child)');
       existingItems.forEach(item => item.remove());
       
-      // Add empty message if no notifications
-      if (items.length === 0) {
+      // Filter to only show unread notifications
+      const unreadItems = items.filter(i => i.is_read === '0' || i.is_read === 0);
+      
+      // Add empty message if no unread notifications
+      if (unreadItems.length === 0) {
         if (!empty) {
           const emptyDiv = document.createElement('li');
           emptyDiv.innerHTML = '<div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div>';
@@ -233,8 +259,8 @@ function reloadNotificationList() {
         empty.remove();
       }
       
-      // Add new notifications
-      items.forEach(n => {
+      // Add new unread notifications
+      unreadItems.forEach(n => {
         const li = document.createElement('li');
         li.innerHTML = `<a class="dropdown-item" href="#" data-id="${n.id}">${n.title}<br><small class="text-muted">${n.message}</small></a>`;
         menu.appendChild(li);
@@ -245,6 +271,7 @@ function reloadNotificationList() {
         a.addEventListener('click', (e) => {
           e.preventDefault();
           const id = a.getAttribute('data-id');
+          currentNotificationId = id; // Store the notification ID
           fetch(APP_URL + '/api/notifications/view/' + id, { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
             .then(async r => {
               const text = await r.text();
@@ -260,10 +287,18 @@ function reloadNotificationList() {
 }
 
 function showNotificationModal(trn){
+  console.log('Showing notification modal for transaction:', trn);
+  
   const details = document.getElementById('notifTrnDetails');
   if (trn) {
     currentNotifTransactionId = trn.id;
-    const amount = (trn.amount || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    currentTransactionReference = trn.reference_no; // Store the reference number
+    currentTransactionType = trn.transaction_type; // Store the transaction type
+    console.log('Set currentNotifTransactionId to:', currentNotifTransactionId);
+    console.log('Set currentTransactionType to:', currentTransactionType);
+    console.log('Transaction data received:', JSON.stringify(trn, null, 2));
+    
+    const amount = (trn.amount || trn.total_amount || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     
     // Format transaction type for display
     let transactionType = 'Unknown';
@@ -282,36 +317,30 @@ function showNotificationModal(trn){
         break;
     }
     
-    // Generate distribution table if child transactions exist
+    console.log('Transaction type determined:', transactionType);
+    console.log('Amount:', amount);
+    
+    // Generate distribution table if distributions exist
     let distributionTable = '';
-    if (trn.child_transactions && trn.child_transactions.length > 0) {
-      const childTransactions = trn.child_transactions;
+    if (trn.distributions && trn.distributions.length > 0) {
+      console.log('Distributions found:', trn.distributions);
+      const distributions = trn.distributions;
       let totalDebit = 0;
       let totalCredit = 0;
       
-      const distributionRows = childTransactions.map(transaction => {
-        // Determine transaction type from reference number if transaction_type is empty
-        let transactionType = transaction.transaction_type;
-        if (!transactionType || transactionType === '') {
-          if (transaction.reference_no && transaction.reference_no.includes('-D')) {
-            transactionType = 'debit';
-          } else if (transaction.reference_no && transaction.reference_no.includes('-C')) {
-            transactionType = 'credit';
-          }
-        }
-        
-        const amount = parseFloat(transaction.amount) || 0;
-        if (transactionType === 'debit') totalDebit += amount;
-        if (transactionType === 'credit') totalCredit += amount;
+      const distributionRows = distributions.map(distribution => {
+        const amount = parseFloat(distribution.amount) || 0;
+        if (distribution.payment_type === 'debit') totalDebit += amount;
+        if (distribution.payment_type === 'credit') totalCredit += amount;
         
         return `
           <tr>
-            <td>${transaction.account_name || 'N/A'}</td>
-            <td>${transaction.project_name || '-'}</td>
-            <td>${transaction.department_name || '-'}</td>
-            <td>${transaction.supplier_name || '-'}</td>
-            <td class="text-end">${transactionType === 'debit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
-            <td class="text-end">${transactionType === 'credit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+            <td>${distribution.account_name || 'N/A'}</td>
+            <td>${distribution.project_name || '-'}</td>
+            <td>${distribution.department_name || '-'}</td>
+            <td>${distribution.supplier_name || '-'}</td>
+            <td class="text-end">${distribution.payment_type === 'debit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+            <td class="text-end">${distribution.payment_type === 'credit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
           </tr>
         `;
       }).join('');
@@ -344,6 +373,8 @@ function showNotificationModal(trn){
           </table>
         </div>
       `;
+    } else {
+      console.log('No distributions found');
     }
     
     details.innerHTML = `
@@ -357,6 +388,7 @@ function showNotificationModal(trn){
       ${distributionTable}
     `;
   } else {
+    console.log('No transaction data received');
     details.textContent = 'No details available.';
   }
   
@@ -381,12 +413,15 @@ document.addEventListener('click', function(e){
   if (e.target && e.target.id === 'notifApproveBtn') {
     if (!currentNotifTransactionId) return;
     
+    console.log('Approving transaction with ID:', currentNotifTransactionId);
+    console.log('Transaction type:', currentTransactionType);
+    
     // Show confirmation dialog
     if (!confirm('Do you want to approve this transaction?')) {
       return;
     }
     
-    fetch(APP_URL + '/api/transactions/' + currentNotifTransactionId + '/approve', { method: 'POST' })
+         fetch(APP_URL + '/api/transactions/' + currentTransactionType + '/' + currentNotifTransactionId + '/approve', { method: 'POST' })
       .then(r => r.json()).then(resp => {
         if (resp.success) {
           bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
@@ -396,11 +431,30 @@ document.addEventListener('click', function(e){
            } else {
              showAutoDismissAlert('Transaction approved successfully!', 'success');
            }
-          // Reload notification count and list after a short delay
-          setTimeout(() => {
-            reloadNotificationCount();
-            reloadNotificationList();
-          }, 500);
+          // Mark the specific notification as read
+          if (currentNotificationId) {
+            console.log('Marking notification as read:', currentNotificationId);
+            fetch(APP_URL + '/api/notifications/' + currentNotificationId + '/mark-read', { method: 'POST' })
+              .then(r => r.json())
+              .then(resp => {
+                console.log('Mark as read response:', resp);
+                // Reload notification count and list after marking as read
+                setTimeout(() => {
+                  reloadNotificationCount();
+                  reloadNotificationList();
+                }, 500);
+              })
+              .catch(error => {
+                console.error('Error marking notification as read:', error);
+              });
+          } else {
+            console.log('No currentNotificationId available, using fallback');
+            // Fallback: reload notification count and list after a short delay
+            setTimeout(() => {
+              reloadNotificationCount();
+              reloadNotificationList();
+            }, 500);
+          }
                  } else {
            // Show error message
            if (window.EARS && window.EARS.showAlert) {
@@ -419,57 +473,92 @@ document.addEventListener('click', function(e){
        });
   }
   if (e.target && e.target.id === 'notifRejectBtn') {
-    if (!currentNotifTransactionId) return;
-    const reason = document.getElementById('notifComment').value.trim();
+    console.log('Reject button clicked');
+    console.log('Current transaction ID:', currentNotifTransactionId);
+    console.log('Transaction type:', currentTransactionType);
     
-         // Validate that a reason is provided for rejection
-     if (!reason) {
-       if (window.EARS && window.EARS.showAlert) {
-         window.EARS.showAlert('Please provide a reason for rejection.', 'warning');
-       } else {
-         showAutoDismissAlert('Please provide a reason for rejection.', 'warning');
-       }
-       return;
-     }
+    if (!currentNotifTransactionId) {
+      console.error('No transaction ID found for rejection');
+      return;
+    }
+    
+    const reason = document.getElementById('notifComment').value.trim();
+    console.log('Rejection reason:', reason);
+    
+    // Validate that a reason is provided for rejection
+    if (!reason) {
+      if (window.EARS && window.EARS.showAlert) {
+        window.EARS.showAlert('Please provide a reason for rejection.', 'warning');
+      } else {
+        showAutoDismissAlert('Please provide a reason for rejection.', 'warning');
+      }
+      return;
+    }
     
     // Show confirmation dialog
     if (!confirm('Do you want to reject this transaction?')) {
       return;
     }
     
-    fetch(APP_URL + '/api/transactions/' + currentNotifTransactionId + '/reject', {
+    console.log('Sending rejection request to:', APP_URL + '/api/transactions/' + currentTransactionType + '/' + currentNotifTransactionId + '/reject');
+    
+    fetch(APP_URL + '/api/transactions/' + currentTransactionType + '/' + currentNotifTransactionId + '/reject', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason })
-    }).then(r => r.json()).then(resp => {
-              if (resp.success) {
-          bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
-                     // Show success message with guaranteed auto-dismiss
-           if (window.EARS && window.EARS.showAlert) {
-             window.EARS.showAlert('Transaction rejected successfully!', 'success');
-           } else {
-             showAutoDismissAlert('Transaction rejected successfully!', 'success');
-           }
-          // Reload notification count and list after a short delay
+      body: JSON.stringify({ return_reason: reason })
+    }).then(r => {
+      console.log('Rejection response status:', r.status);
+      return r.json();
+    }).then(resp => {
+      console.log('Rejection response:', resp);
+      if (resp.success) {
+        bootstrap.Modal.getInstance(document.getElementById('notifModal')).hide();
+        // Show success message with guaranteed auto-dismiss
+        if (window.EARS && window.EARS.showAlert) {
+          window.EARS.showAlert('Transaction rejected successfully!', 'success');
+        } else {
+          showAutoDismissAlert('Transaction rejected successfully!', 'success');
+        }
+        // Mark the specific notification as read
+        if (currentNotificationId) {
+          console.log('Marking notification as read (rejection):', currentNotificationId);
+          fetch(APP_URL + '/api/notifications/' + currentNotificationId + '/mark-read', { method: 'POST' })
+            .then(r => r.json())
+            .then(resp => {
+              console.log('Mark as read response (rejection):', resp);
+              // Reload notification count and list after marking as read
+              setTimeout(() => {
+                reloadNotificationCount();
+                reloadNotificationList();
+              }, 500);
+            })
+            .catch(error => {
+              console.error('Error marking notification as read (rejection):', error);
+            });
+        } else {
+          console.log('No currentNotificationId available for rejection, using fallback');
+          // Fallback: reload notification count and list after a short delay
           setTimeout(() => {
             reloadNotificationCount();
             reloadNotificationList();
           }, 500);
-                 } else {
-           // Show error message with guaranteed auto-dismiss
-           if (window.EARS && window.EARS.showAlert) {
-             window.EARS.showAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
-           } else {
-             showAutoDismissAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
-           }
-         }
-     }).catch(error => {
-       // Show error message with guaranteed auto-dismiss
-       if (window.EARS && window.EARS.showAlert) {
-         window.EARS.showAlert('Failed to reject transaction: ' + error.message, 'danger');
-       } else {
-         showAutoDismissAlert('Failed to reject transaction: ' + error.message, 'danger');
-       }
-     });
+        }
+      } else {
+        // Show error message with guaranteed auto-dismiss
+        if (window.EARS && window.EARS.showAlert) {
+          window.EARS.showAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
+        } else {
+          showAutoDismissAlert('Failed to reject transaction: ' + (resp.message || 'Unknown error'), 'danger');
+        }
+      }
+    }).catch(error => {
+      console.error('Rejection error:', error);
+      // Show error message with guaranteed auto-dismiss
+      if (window.EARS && window.EARS.showAlert) {
+        window.EARS.showAlert('Failed to reject transaction: ' + error.message, 'danger');
+      } else {
+        showAutoDismissAlert('Failed to reject transaction: ' + error.message, 'danger');
+      }
+    });
   }
 });
 
@@ -479,6 +568,8 @@ document.getElementById('notifModal').addEventListener('hidden.bs.modal', functi
   document.getElementById('notifComment').value = '';
   // Reset current transaction ID
   currentNotifTransactionId = null;
+  // Reset current transaction reference number
+  currentTransactionReference = null;
   // Clear any existing alerts to prevent conflicts
   const alertContainer = document.getElementById('globalAlertContainer');
   if (alertContainer) {

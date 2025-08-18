@@ -91,12 +91,11 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="payment_status" class="form-label">Status</label>
-                                <select class="form-select" id="payment_status" name="payment_status" <?= $isStatusLocked ? 'disabled' : '' ?> >
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Approved">Approved</option>
-                                    <option value="Rejected">Rejected</option>
-                                    <option value="On Hold">On Hold</option>
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" <?= $isStatusLocked ? 'disabled' : '' ?> >
+                                    <option value="pending" selected>Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
                                 </select>
                             </div>
                         </div>
@@ -158,7 +157,7 @@
             </div>
             <div class="card-body">
                 <!-- Filters -->
-                <div class="row mb-3">
+                <div class="row mb-3" style="display: none;">
                     <div class="col-md-2">
                         <label for="filterDate" class="form-label">Date Range</label>
                         <input type="date" class="form-control" id="filterDate" placeholder="Filter by date">
@@ -197,79 +196,24 @@
                     </div>
                 </div>
                 
-                <div class="table-responsive">
-                    <table class="table table-hover" id="transactionsTable">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Official Receipt Number</th>
-                                <th>Payment Form</th>
-                                <th>Total Amount</th>
-                                <th>Payment Description</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (!empty($transactions)): ?>
-                                <?php foreach ($transactions as $transaction): ?>
-                                    <tr>
-                                        <td><?= date('M d, Y', strtotime($transaction['transaction_date'])) ?></td>
-                                        <td>
-                                            <span class="badge bg-success">
-                                                <?= htmlspecialchars($transaction['reference_no']) ?>
-                                            </span>
-                                        </td>
-                                        <td><?= htmlspecialchars($transaction['payment_form'] ?? 'Cash') ?></td>
-                                        <td class="text-end">₱<?= number_format($transaction['amount'], 2) ?></td>
-                                        <td><?= htmlspecialchars($transaction['description'] ?? '-') ?></td>
-                                        <td>
-                                            <?php 
-                                            $status = $transaction['check_payment_status'] ?? 'Pending';
-                                            $statusClass = 'bg-secondary';
-                                            
-                                            switch ($status) {
-                                                case 'Approved':
-                                                    $statusClass = 'bg-success';
-                                                    break;
-                                                case 'Rejected':
-                                                    $statusClass = 'bg-danger';
-                                                    break;
-                                                case 'On Hold':
-                                                    $statusClass = 'bg-warning';
-                                                    break;
-                                                case 'Pending':
-                                                default:
-                                                    $statusClass = 'bg-secondary';
-                                                    break;
-                                            }
-                                            ?>
-                                            <span class="badge <?= $statusClass ?>">
-                                                <?= htmlspecialchars($status) ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button type="button" class="btn btn-sm btn-outline-primary view-transaction-btn" 
-                                                    data-transaction-id="<?= $transaction['id'] ?>">
-                                                <i class="bi bi-eye"></i> View
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td class="text-center text-muted">No recent cash receipts</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                                 <div class="table-responsive">
+                     <table class="table table-hover" id="transactionsTable">
+                         <thead>
+                             <tr>
+                                 <th>Date</th>
+                                 <th>Official Receipt Number</th>
+                                 <th>Payment Form</th>
+                                 <th>Total Amount</th>
+                                 <th>Payment Description</th>
+                                 <th>Status</th>
+                                 <th>Action</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             <!-- Data will be loaded via server-side processing -->
+                         </tbody>
+                     </table>
+                 </div>
             </div>
         </div>
     </div>
@@ -304,32 +248,14 @@ let accountRowCounter = 0;
 
 $(document).ready(function() {
     $("#payment_form").val("cash");
+    
     // Update summary when form fields change
     $('#reference_no, #transaction_date, #payment_form').on('input change', function() {
-   
         updateSummary();
     });
     
     // Add initial account row
-
     addAccountRow();
-    
-    // Date field is already initialized with HTML5 date input
-    // No additional datepicker needed
-    
-    // Initialize DataTable with a longer delay to ensure table is fully rendered
-    setTimeout(function() {
-        // Additional check to ensure table is ready
-        const table = $('#transactionsTable');
-        if (table.length > 0 && table.find('tbody tr').length > 0) {
-            initializeTransactionsTable();
-        } else {
-            setTimeout(function() {
-                initializeTransactionsTable();
-            }, 500);
-        }
-    }, 1000);
-    
     
     // Initialize filters
     initializeFilters();
@@ -340,10 +266,8 @@ $(document).ready(function() {
         viewTransactionDetails(transactionId);
     });
     
-    // The Add Account Entry button uses inline onclick to avoid double-binding
-    
-    // Load recent transactions
-    loadRecentTransactions();
+    // Initialize server-side DataTable
+    initializeTransactionsTable();
 });
 
 function addAccountRow() {
@@ -575,7 +499,7 @@ function saveTransaction() {
         check_number: $('#check_number').val(),
         bank: $('#bank').val(),
         billing_number: $('#billing_number').val(),
-        payment_status: $('#payment_status').val(),
+                    status: $('#status').val(),
         account_distribution: []
     };
     
@@ -623,7 +547,15 @@ function saveTransaction() {
         data: JSON.stringify(formData),
         success: function(response) {
             if (response.success) {
-                EARS.showAlert('Cash receipt recorded successfully!', 'success', '#globalAlertContainer');
+                // Show success message
+                EARS.showAlert(response.message || 'Cash receipt recorded successfully!', 'success', '#globalAlertContainer');
+                
+                // Show warnings if any
+                if (response.warnings && response.warnings.length > 0) {
+                    const warningMessage = 'Warnings: ' + response.warnings.join(', ');
+                    EARS.showAlert(warningMessage, 'warning', '#globalAlertContainer');
+                }
+                
                 form[0].reset();
                 $('#reference_no').val('CR-<?= date('Ymd') ?>-<?= str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT) ?>');
                 $('#transaction_date').val('<?= date('Y-m-d') ?>');
@@ -631,18 +563,34 @@ function saveTransaction() {
                 addAccountRow();
                 updateSummary();
                 
-                // Refresh recent transactions list without reloading the page
-                // Add a tiny delay and cache-bust to avoid stale cached responses
-                setTimeout(function(){ 
-                    loadRecentTransactions(true); 
-                }, 150);
+                                 // Refresh the DataTable to show the new transaction
+                 setTimeout(function(){ 
+                     console.log('Refreshing DataTable after successful save...'); // Debug log
+                     if (transactionsTable) {
+                         transactionsTable.ajax.reload();
+                     }
+                 }, 1000);
             } else {
                 EARS.showAlert(response.message || response.error || 'Failed to record transaction', 'danger', '#globalAlertContainer');
             }
         },
         error: function(xhr) {
             const response = xhr.responseJSON;
-            EARS.showAlert(response?.error || 'Failed to record transaction', 'danger', '#globalAlertContainer');
+            
+            // Handle accounting validation errors
+            if (response?.error === 'Accounting validation failed') {
+                let errorMessage = 'Accounting validation errors:\n';
+                if (response.message) {
+                    errorMessage += response.message;
+                } else if (response.details) {
+                    response.details.forEach(error => {
+                        errorMessage += '• ' + error + '\n';
+                    });
+                }
+                EARS.showAlert(errorMessage, 'danger', '#globalAlertContainer');
+            } else {
+                EARS.showAlert(response?.error || response?.message || 'Failed to record transaction', 'danger', '#globalAlertContainer');
+            }
         },
         complete: function() {
             saveBtn.prop('disabled', false).html(originalText);
@@ -650,112 +598,9 @@ function saveTransaction() {
     });
 }
 
-function loadRecentTransactions(bustCache = false) {
-    const apiUrl = APP_URL + '/api/cash-receipt/recent' + (bustCache ? ('?t=' + Date.now()) : '');
-    
-    $.ajax({
-        url: apiUrl,
-        method: 'GET',
-        cache: false,
-        headers: { 'Cache-Control': 'no-cache' },
-        success: function(response) {
-            if (response && response.success) {
-                const transactions = response.data || response.transactions || [];
-                const table = $('#transactionsTable');
-                const isDT = $.fn.DataTable.isDataTable('#transactionsTable');
 
-                // Build fresh tbody HTML
-                let html = '';
-                transactions.forEach(t => {
-                    // Determine status badge class based on check_payment_status
-                    let statusClass = 'bg-secondary';
-                    let status = t.check_payment_status || 'Pending';
-                    
-                    switch (status) {
-                        case 'Approved':
-                            statusClass = 'bg-success';
-                            break;
-                        case 'Rejected':
-                            statusClass = 'bg-danger';
-                            break;
-                        case 'On Hold':
-                            statusClass = 'bg-warning';
-                            break;
-                        case 'Pending':
-                        default:
-                            statusClass = 'bg-secondary';
-                            break;
-                    }
-                    
-                    html += `
-                        <tr>
-                            <td>${new Date(t.transaction_date).toLocaleDateString('en-PH')}</td>
-                            <td><span class="badge bg-success">${t.reference_no}</span></td>
-                            <td>${t.payment_form || 'Cash'}</td>
-                            <td class="text-end">₱${parseFloat(t.amount).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                            <td>${t.description || '-'}</td>
-                            <td><span class="badge ${statusClass}">${status}</span></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-primary view-transaction-btn" data-transaction-id="${t.id}">
-                                    <i class="bi bi-eye"></i> View
-                                </button>
-                            </td>
-                        </tr>`;
-                });
 
-                // Clear any active filters to ensure the new row is visible
-                try {
-                    $('#filterDate').val('');
-                    $('#filterReference').val('');
-                    $('#filterPaymentForm').val('');
-                    if ($.fn.dataTable && $.fn.dataTable.ext) {
-                        $.fn.dataTable.ext.search = [];
-                    }
-                } catch (e) {
-                    // Silently handle filter clearing errors
-                }
 
-                // Destroy DT if present, replace tbody HTML, re-init DT, then draw
-                if (isDT) {
-                    try { 
-                        table.DataTable().clear().destroy(); 
-                    } catch (e) {
-                        // Silently handle DataTable destruction errors
-                    }
-                }
-                const tbody = table.find('tbody');
-                if (html) {
-                    tbody.html(html);
-                } else {
-                    // Create a proper row with 7 individual cells instead of colspan
-                    tbody.html(`
-                        <tr>
-                            <td class="text-center text-muted">No recent cash receipts</td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                    `);
-                }
-
-                // Reinitialize DataTable to guarantee redraw and updated state
-                initializeTransactionsTable();
-
-                // Delegate click for dynamically added View buttons (safety)
-                $('#transactionsTable tbody').off('click', '.view-transaction-btn').on('click', '.view-transaction-btn', function() {
-                    const transactionId = $(this).data('transaction-id');
-                    viewTransactionDetails(transactionId);
-                });
-            }
-        },
-        error: function(xhr, status, error) {
-            // Silently handle errors for recent transactions loading
-        }
-    });
-}
 
 // Auto-generate reference number
 $('#reference_no').on('focus', function() {
@@ -769,9 +614,18 @@ $('#reference_no').on('focus', function() {
 let transactionsTable;
 
 function initializeTransactionsTable() {
+    console.log('Initializing server-side DataTable...'); // Debug log
+    
+    // Check if DataTable is available
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTable library not loaded!');
+        return;
+    }
+    
     // Check if table exists
     const table = $('#transactionsTable');
     if (table.length === 0) {
+        console.log('Table not found'); // Debug log
         return;
     }
 
@@ -779,48 +633,133 @@ function initializeTransactionsTable() {
     if ($.fn.DataTable.isDataTable('#transactionsTable')) {
         try {
             $('#transactionsTable').DataTable().destroy();
+            console.log('Destroyed existing DataTable'); // Debug log
         } catch (error) {
-            // Silently handle DataTable destruction errors
+            console.log('Error destroying DataTable:', error); // Debug log
         }
     }
     
-    // Check if table has the correct number of columns
-    const headerCells = table.find('thead tr th').length;
-    const firstRowCells = table.find('tbody tr:first td').length;
-    
-    // If there's a mismatch, don't initialize DataTable
-    if (headerCells !== firstRowCells && firstRowCells > 0) {
-        console.warn('Column count mismatch: headers=' + headerCells + ', first row=' + firstRowCells);
-        return;
-    }
-    
-    // Initialize DataTable
-    transactionsTable = $('#transactionsTable').DataTable({
-        pageLength: 10,
-        order: [[0, 'desc']], // Sort by date descending
-        columnDefs: [
-            { targets: 3, type: 'num-fmt', className: 'text-end' }, // Total Amount column
-            { targets: 6, orderable: false, searchable: false } // Action column (index 6)
-        ],
-        language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries per page",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            paginate: {
-                first: "First",
-                last: "Last",
-                next: "Next",
-                previous: "Previous"
+    // Initialize server-side DataTable
+    try {
+        transactionsTable = $('#transactionsTable').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: {
+                url: APP_URL + '/api/cash-receipt/recent',
+                type: 'GET',
+                data: function(d) {
+                    // Add any additional parameters if needed
+                    console.log('DataTable request data:', d);
+                    return d;
+                },
+                dataSrc: function(json) {
+                    console.log('DataTable response:', json);
+                    if (json.success && json.data) {
+                        // Transform the data to match DataTable format
+                        return json.data.map(function(item) {
+                            // Format date
+                            const formattedDate = new Date(item.transaction_date).toLocaleDateString('en-PH');
+                            
+                            // Format amount
+                            const formattedAmount = '₱' + parseFloat(item.total_amount || item.amount || 0).toLocaleString('en-PH', {minimumFractionDigits: 2});
+                            
+                            // Format status badge
+                            let statusClass = 'bg-secondary';
+                            let status = item.status || 'pending';
+                            
+                            switch (status) {
+                                case 'approved':
+                                    statusClass = 'bg-success';
+                                    break;
+                                case 'rejected':
+                                    statusClass = 'bg-danger';
+                                    break;
+                                case 'pending':
+                                    statusClass = 'bg-warning';
+                                    break;
+                                default:
+                                    statusClass = 'bg-secondary';
+                                    break;
+                            }
+                            
+                                                         // Create action buttons
+                             let actionButtons = '<div class="d-flex gap-1">';
+                             actionButtons += '<button type="button" class="btn btn-sm btn-outline-primary view-transaction-btn d-flex align-items-center" data-transaction-id="' + item.id + '"><i class="bi bi-eye me-1"></i> View</button>';
+                             
+                             // Add delete button for pending or rejected transactions (only for accountant, manager, admin)
+                             <?php if (isset($user['role']) && in_array($user['role'], ['accountant', 'manager', 'admin'])): ?>
+                             if (status === 'pending' || status === 'rejected') {
+                                 actionButtons += '<button type="button" class="btn btn-sm btn-outline-danger delete-transaction-btn d-flex align-items-center" data-transaction-id="' + item.id + '" data-reference="' + (item.reference_no || '') + '"><i class="bi bi-trash me-1"></i> Delete</button>';
+                             }
+                             <?php endif; ?>
+                             actionButtons += '</div>';
+                            
+                            return [
+                                formattedDate,
+                                '<span class="badge bg-success">' + (item.reference_no || '') + '</span>',
+                                item.payment_form || 'Cash',
+                                '<span class="text-end">' + formattedAmount + '</span>',
+                                item.description || '-',
+                                '<span class="badge ' + statusClass + '">' + status + '</span>',
+                                actionButtons
+                            ];
+                        });
+                    }
+                    return [];
+                },
+                error: function(xhr, error, thrown) {
+                    console.error('DataTable AJAX error:', error);
+                    console.error('Response:', xhr.responseText);
+                    console.error('Status:', xhr.status);
+                }
+            },
+            columns: [
+                { data: 0, name: 'transaction_date' }, // Date
+                { data: 1, name: 'reference_no' }, // Official Receipt Number
+                { data: 2, name: 'payment_form' }, // Payment Form
+                { data: 3, name: 'total_amount', className: 'text-end' }, // Total Amount
+                { data: 4, name: 'description' }, // Payment Description
+                { data: 5, name: 'status' }, // Status
+                { data: 6, name: 'action', orderable: false, searchable: false } // Action
+            ],
+            pageLength: 10,
+            order: [[0, 'desc']], // Sort by date descending
+            dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip',
+            language: {
+                processing: '<div class="spinner-border spinner-border-sm me-2"></div>Loading...',
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries per page",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                emptyTable: "No cash receipts found",
+                zeroRecords: "No matching cash receipts found",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next",
+                    previous: "Previous"
+                }
+            },
+            drawCallback: function() {
+                // Re-attach click handlers for dynamically added View buttons
+                $('#transactionsTable tbody').off('click', '.view-transaction-btn').on('click', '.view-transaction-btn', function() {
+                    const transactionId = $(this).data('transaction-id');
+                    viewTransactionDetails(transactionId);
+                });
+                
+                // Re-attach click handlers for delete buttons
+                $('#transactionsTable tbody').off('click', '.delete-transaction-btn').on('click', '.delete-transaction-btn', function() {
+                    const transactionId = $(this).data('transaction-id');
+                    const reference = $(this).data('reference');
+                    deleteTransaction(transactionId, reference);
+                });
             }
-        },
-        drawCallback: function() {
-            // Re-attach click handlers after DataTable redraws
-            $('.view-transaction-btn').off('click').on('click', function() {
-                const transactionId = $(this).data('transaction-id');
-                viewTransactionDetails(transactionId);
-            });
-        }
-    });
+        });
+        console.log('Server-side DataTable initialized successfully'); // Debug log
+    } catch (error) {
+        console.error('Error initializing DataTable:', error);
+        // Fallback: ensure table is visible even without DataTable
+        table.show();
+    }
 }
 
 function initializeFilters() {
@@ -846,49 +785,12 @@ function initializeFilters() {
 }
 
 function filterTransactions() {
-    const dateFilter = $('#filterDate').val();
-    const referenceFilter = $('#filterReference').val().toLowerCase();
-    const paymentFormFilter = $('#filterPaymentForm').val();
-    const statusFilter = $('#filterStatus').val();
-    
-    // Remove existing custom filtering
-    $.fn.dataTable.ext.search.pop();
-    
-    // Custom filtering
-    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-        const rowDate = data[0]; // Date column (format: "Dec 04, 2025")
-        const rowReference = data[1].toLowerCase(); // Reference column
-        const rowPaymentForm = data[2].toLowerCase(); // Payment form column
-        const rowStatus = data[5]; // Status column
-        
-        // Date filter - convert row date to YYYY-MM-DD format for comparison
-        if (dateFilter) {
-            const rowDateObj = new Date(rowDate);
-            const filterDateObj = new Date(dateFilter);
-            if (rowDateObj.toDateString() !== filterDateObj.toDateString()) {
-                return false;
-            }
-        }
-        
-        // Reference number filter
-        if (referenceFilter && !rowReference.includes(referenceFilter)) {
-            return false;
-        }
-        
-        // Payment form filter
-        if (paymentFormFilter && rowPaymentForm !== paymentFormFilter.toLowerCase()) {
-            return false;
-        }
-        
-        // Status filter
-        if (statusFilter && rowStatus !== statusFilter) {
-            return false;
-        }
-        
-        return true;
-    });
-    
-    transactionsTable.draw();
+    // For server-side DataTable, we need to implement custom filtering
+    // This will be handled by the server-side processing
+    // For now, we'll just reload the table with current filters
+    if (transactionsTable) {
+        transactionsTable.ajax.reload();
+    }
 }
 
 function clearFilters() {
@@ -897,11 +799,11 @@ function clearFilters() {
     $('#filterPaymentForm').val('');
     $('#filterStatus').val('');
     
-    // Remove all custom filtering
-    while ($.fn.dataTable.ext.search.length > 0) {
-        $.fn.dataTable.ext.search.pop();
+    // Clear DataTable search and reload
+    if (transactionsTable) { 
+        transactionsTable.search(''); 
+        transactionsTable.draw(); 
     }
-    transactionsTable.draw();
 }
 
 // Transaction Details Modal Functions
@@ -963,86 +865,196 @@ function viewTransactionDetails(transactionId) {
     });
 }
 
-function displayTransactionDetails(transaction) {
-    // Check if this is an old transaction (no child transactions)
-    const hasChildTransactions = transaction.child_transactions && transaction.child_transactions.length > 0;
+function deleteTransaction(id, reference) {
+    if (!confirm('Are you sure you want to delete cash receipt ' + reference + '? This action cannot be undone.')) {
+        return;
+    }
     
-    const modalContent = `
-        <div class="row">
-            <div class="col-md-6">
-                <h6 class="fw-bold">Transaction Information</h6>
-                <table class="table table-sm">
-                    <tr>
-                        <td><strong>Official Receipt Number:</strong></td>
-                        <td><span class="badge bg-success">${transaction.reference_no}</span></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Date:</strong></td>
-                        <td>${new Date(transaction.transaction_date).toLocaleDateString('en-PH')}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Payment Form:</strong></td>
-                        <td>${transaction.payment_form || 'Cash'}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Check Number:</strong></td>
-                        <td>${transaction.check_number || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Bank:</strong></td>
-                        <td>${transaction.bank || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Billing Number:</strong></td>
-                        <td>${transaction.billing_number || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Description:</strong></td>
-                        <td>${transaction.description || '-'}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Total Amount:</strong></td>
-                        <td class="fw-bold">₱${parseFloat(transaction.amount).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-                    </tr>
-                    ${!hasChildTransactions ? `
-                    <tr>
-                        <td><strong>Account:</strong></td>
-                        <td>${transaction.account_name || 'N/A'}</td>
-                    </tr>
-                    ` : ''}
-                </table>
-            </div>
-            <div class="col-md-6">
-                <h6 class="fw-bold">Account Distribution</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Account</th>
-                                <th>Project</th>
-                                <th>Department</th>
-                                <th>Subsidiary</th>
-                                <th>Debit</th>
-                                <th>Credit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${generateAccountRows(transaction.child_transactions || [])}
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-info">
-                                <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
-                                <td class="text-end"><strong>₱${calculateTotalDebit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
-                                <td class="text-end"><strong>₱${calculateTotalCredit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
-                            </tr>
-                        </tfoot>
+    $.ajax({
+        url: APP_URL + '/api/cash-receipt/delete/' + id,
+        method: 'POST',
+        dataType: 'json',
+        success: function(resp) {
+            if (resp && resp.success) {
+                EARS.showAlert(resp.message || 'Cash receipt deleted successfully!', 'success');
+                // Refresh the DataTable
+                if (transactionsTable) {
+                    transactionsTable.ajax.reload();
+                }
+            } else {
+                EARS.showAlert(resp.message || 'Failed to delete cash receipt', 'danger');
+            }
+        },
+        error: function(xhr) {
+            const r = xhr.responseJSON;
+            EARS.showAlert(r?.message || 'Failed to delete cash receipt', 'danger');
+        }
+    });
+}
+
+function displayTransactionDetails(transaction) {
+    // Check if this is using the new structure (has distributions array)
+    const hasNewStructure = transaction.distributions && Array.isArray(transaction.distributions);
+    
+    if (hasNewStructure) {
+        // New structure: transaction with distributions array
+        const distributions = transaction.distributions;
+        
+        const modalContent = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Transaction Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Official Receipt Number:</strong></td>
+                            <td><span class="badge bg-success">${transaction.reference_no}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Date:</strong></td>
+                            <td>${new Date(transaction.transaction_date).toLocaleDateString('en-PH')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Payment Form:</strong></td>
+                            <td>${transaction.payment_form || 'Cash'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Check Number:</strong></td>
+                            <td>${transaction.check_number || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bank:</strong></td>
+                            <td>${transaction.bank || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Billing Number:</strong></td>
+                            <td>${transaction.billing_number || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Description:</strong></td>
+                            <td>${transaction.description || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Amount:</strong></td>
+                            <td class="fw-bold">₱${parseFloat(transaction.total_amount || transaction.amount || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td><span class="badge bg-secondary">${transaction.status || 'Posted'}</span></td>
+                        </tr>
                     </table>
                 </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Account Distribution</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Account</th>
+                                    <th>Project</th>
+                                    <th>Department</th>
+                                    <th>Subsidiary</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateNewAccountRows(distributions)}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                                    <td class="text-end"><strong>₱${calculateNewTotalDebit(distributions).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                                    <td class="text-end"><strong>₱${calculateNewTotalCredit(distributions).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-    `;
-    
-    $('#transactionModalBody').html(modalContent);
+        `;
+        
+        $('#transactionModalBody').html(modalContent);
+    } else {
+        // Legacy structure: transaction with child_transactions
+        const hasChildTransactions = transaction.child_transactions && transaction.child_transactions.length > 0;
+        
+        const modalContent = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Transaction Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Official Receipt Number:</strong></td>
+                            <td><span class="badge bg-success">${transaction.reference_no}</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Date:</strong></td>
+                            <td>${new Date(transaction.transaction_date).toLocaleDateString('en-PH')}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Payment Form:</strong></td>
+                            <td>${transaction.payment_form || 'Cash'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Check Number:</strong></td>
+                            <td>${transaction.check_number || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bank:</strong></td>
+                            <td>${transaction.bank || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Billing Number:</strong></td>
+                            <td>${transaction.billing_number || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Description:</strong></td>
+                            <td>${transaction.description || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Amount:</strong></td>
+                            <td class="fw-bold">₱${parseFloat(transaction.amount).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                        ${!hasChildTransactions ? `
+                        <tr>
+                            <td><strong>Account:</strong></td>
+                            <td>${transaction.account_name || 'N/A'}</td>
+                        </tr>
+                        ` : ''}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Account Distribution</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Account</th>
+                                    <th>Project</th>
+                                    <th>Department</th>
+                                    <th>Subsidiary</th>
+                                    <th>Debit</th>
+                                    <th>Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateAccountRows(transaction.child_transactions || [])}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                                    <td class="text-end"><strong>₱${calculateTotalDebit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                                    <td class="text-end"><strong>₱${calculateTotalCredit(transaction.child_transactions || []).toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#transactionModalBody').html(modalContent);
+    }
 }
 
 function generateAccountRows(childTransactions) {
@@ -1110,6 +1122,60 @@ function calculateTotalCredit(childTransactions) {
         .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 }
 
+// Helper functions for new structure
+function generateNewAccountRows(distributions) {
+    if (!distributions || distributions.length === 0) {
+        return `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No account distributions found.
+                </td>
+            </tr>
+        `;
+    }
+    
+    return distributions.map(distribution => {
+        const amount = parseFloat(distribution.amount || 0);
+        const paymentType = distribution.payment_type || 'debit';
+        
+        return `
+            <tr>
+                <td>${distribution.account_name || 'N/A'}</td>
+                <td>${distribution.project_name || '-'}</td>
+                <td>${distribution.department_name || '-'}</td>
+                <td>${distribution.supplier_name || '-'}</td>
+                <td class="text-end">${paymentType === 'debit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+                <td class="text-end">${paymentType === 'credit' ? '₱' + amount.toLocaleString('en-PH', {minimumFractionDigits: 2}) : '-'}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function calculateNewTotalDebit(distributions) {
+    if (!distributions || distributions.length === 0) return 0;
+    return distributions
+        .filter(d => d.payment_type === 'debit')
+        .reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
+}
+
+function calculateNewTotalCredit(distributions) {
+    if (!distributions || distributions.length === 0) return 0;
+    return distributions
+        .filter(d => d.payment_type === 'credit')
+        .reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
+}
+
+function calculateNewTotalAmount(distributions) {
+    if (!distributions || distributions.length === 0) {
+        return 0;
+    }
+    
+    return distributions.reduce((sum, distribution) => {
+        return sum + Math.abs(parseFloat(distribution.amount));
+    }, 0);
+}
+
 function printTransaction() {
     const printWindow = window.open('', '_blank');
     const modalContent = $('#transactionModalBody').html();
@@ -1143,7 +1209,7 @@ function printTransaction() {
     printWindow.print();
 }
 
-// Add custom styles for the account distribution table
+// Add custom styles for the account distribution table and DataTable
 $(document).ready(function() {
     // Add custom CSS for better table display
     $('<style>')
@@ -1182,6 +1248,37 @@ $(document).ready(function() {
             #accountTable .btn-sm {
                 padding: 0.25rem 0.5rem;
                 font-size: 0.75rem;
+            }
+            
+            /* DataTable alignment fixes */
+            .dataTables_wrapper .row {
+                margin: 0;
+                align-items: center;
+            }
+            
+            .dataTables_wrapper .col-sm-6 {
+                padding: 0.5rem 0;
+            }
+            
+            .dataTables_length {
+                margin-bottom: 0;
+            }
+            
+            .dataTables_filter {
+                margin-bottom: 0;
+                text-align: right;
+            }
+            
+            .dataTables_filter input {
+                margin-left: 0.5rem;
+            }
+            
+            .dataTables_info {
+                padding-top: 0.5rem;
+            }
+            
+            .dataTables_paginate {
+                padding-top: 0.5rem;
             }
         `)
         .appendTo('head');

@@ -142,11 +142,46 @@ if (!isset($user)) {
         <?php endif; ?>
 
         <?php if (hasPermission($user, 'reports')): ?>
-        <li class="nav-item" style="display: none;">
-            <a href="<?=APP_URL?>/reports" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/reports') !== false ? 'active' : '' ?>">
+        <li class="nav-item">
+            <a href="#reportsSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/reports') !== false || strpos($_SERVER['REQUEST_URI'], '-report') !== false ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-text"></i>
                 <span>Reports</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
             </a>
+            <ul class="collapse nav flex-column <?= strpos($_SERVER['REQUEST_URI'], '/reports') !== false || strpos($_SERVER['REQUEST_URI'], '-report') !== false ? 'show' : '' ?>" id="reportsSubmenu">
+              
+                <li class="nav-item">
+                    <a href="<?=APP_URL?>/cash-receipt-report" class="nav-link">
+                        <i class="bi bi-circle"></i>
+                        <span>Cash Receipt Report</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?=APP_URL?>/cash-disbursement-report" class="nav-link">
+                        <i class="bi bi-circle"></i>
+                        <span>Cash Disbursement Report</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?=APP_URL?>/check-disbursement-report" class="nav-link">
+                        <i class="bi bi-circle"></i>
+                        <span>Check Disbursement Report</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?=APP_URL?>/trial-balance-report" class="nav-link">
+                        <i class="bi bi-circle"></i>
+                        <span>Trial Balance Report</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?=APP_URL?>/income-statement-report" class="nav-link">
+                        <i class="bi bi-circle"></i>
+                        <span>Income Statement Report</span>
+                    </a>
+                </li>
+                
+            </ul>
         </li>
         <?php endif; ?>
 

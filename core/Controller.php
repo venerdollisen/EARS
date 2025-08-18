@@ -30,7 +30,6 @@ class Controller {
         
         // Get the buffered content
         $content = ob_get_clean();
-        
         // Include layout if it's not an API request and not a standalone page
         if (!$this->isApiRequest() && !$this->isStandalonePage($view)) {
             include 'views/layouts/main.php';
