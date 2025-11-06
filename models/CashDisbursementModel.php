@@ -67,8 +67,8 @@ class CashDisbursementModel extends Model {
         $stmt = $this->db->prepare($sql);
         
         foreach ($distributions as $distribution) {
-            // Determine transaction_type for cash disbursement
-            $transactionType = $this->determineTransactionType($distribution);
+            // Use the transaction_type provided by the controller, or determine it if not provided
+            $transactionType = $distribution['transaction_type'] ?? $this->determineTransactionType($distribution);
             
             $stmt->execute([
                 $headerId,

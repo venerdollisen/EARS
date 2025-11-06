@@ -46,7 +46,7 @@
    
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="check_number" class="form-label">Cash Number</label>
+                                <label for="check_number" class="form-label">Check Number</label>
                                 <input type="text" class="form-control" id="check_number" name="check_number" 
                                        placeholder="Enter check number">
                             </div>
@@ -64,7 +64,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="payee_name" class="form-label">Payee/Cash Name *</label>
+                                <label for="payee_name" class="form-label">Payee Name *</label>
                                 <input type="text" class="form-control" id="payee_name" name="payee_name" 
                                        placeholder="Enter payee name" required>
                             </div>

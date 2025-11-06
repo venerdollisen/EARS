@@ -2,12 +2,6 @@
 require_once 'core/Controller.php';
 require_once 'models/TrialBalanceReportModel.php';
 
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-
 class TrialBalanceReportController extends Controller {
     
     private $model;
@@ -85,7 +79,7 @@ class TrialBalanceReportController extends Controller {
             $pdf->SetTitle('Trial Balance Report');
             
             // Set default header data
-            $pdf->SetHeaderData('', 0, 'Trial Balance Report', 'Generated on ' . date('Y-m-d H:i:s'));
+            $pdf->SetHeaderData('', 0, 'EARS System', 'Trial Balance Report');
             
             // Set header and footer fonts
             $pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
@@ -108,40 +102,106 @@ class TrialBalanceReportController extends Controller {
             // Add a page
             $pdf->AddPage();
             
-            // Set font
-            $pdf->SetFont('helvetica', '', 10);
-            
-            // Add summary information
-            $pdf->Cell(0, 10, 'Summary:', 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Total Accounts: ' . number_format($summary['total_accounts']), 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Total Debits: ' . number_format($summary['total_debits'], 2), 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Total Credits: ' . number_format($summary['total_credits'], 2), 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Net Balance: ' . number_format($summary['net_balance'], 2), 0, 1, 'L');
+            // Title
+            $pdf->SetFont('helvetica', 'B', 16);
+            $pdf->Cell(0, 10, 'TRIAL BALANCE REPORT', 0, 1, 'C');
             $pdf->Ln(5);
             
-            // Add table headers
-            $pdf->SetFont('helvetica', 'B', 9);
-            $pdf->Cell(25, 8, 'Account', 1, 0, 'C');
-            $pdf->Cell(60, 8, 'Account Name', 1, 0, 'C');
-            $pdf->Cell(30, 8, 'Type', 1, 0, 'C');
-            $pdf->Cell(25, 8, 'Debits', 1, 0, 'C');
-            $pdf->Cell(25, 8, 'Credits', 1, 0, 'C');
-            $pdf->Cell(25, 8, 'Balance', 1, 1, 'C');
+            // Report period
+            $pdf->SetFont('helvetica', 'B', 11);
+            $periodText = 'Report Period: ';
+            if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+                $periodText .= date('F j, Y', strtotime($filters['start_date'])) . ' to ' . date('F j, Y', strtotime($filters['end_date']));
+            } else {
+                $periodText .= 'All Periods';
+            }
+            $pdf->Cell(0, 8, $periodText, 0, 1, 'L');
             
-            // Add table data
-            $pdf->SetFont('helvetica', '', 8);
-            foreach ($reportData as $row) {
-                $pdf->Cell(25, 6, $row['account_code'], 1, 0, 'L');
-                $pdf->Cell(60, 6, substr($row['account_name'], 0, 25), 1, 0, 'L');
-                $pdf->Cell(30, 6, $row['account_type'], 1, 0, 'L');
-                $pdf->Cell(25, 6, number_format($row['total_debits'], 2), 1, 0, 'R');
-                $pdf->Cell(25, 6, number_format($row['total_credits'], 2), 1, 0, 'R');
-                $pdf->Cell(25, 6, number_format($row['balance'], 2), 1, 1, 'R');
+            // Generated date
+            $pdf->SetFont('helvetica', '', 9);
+            $pdf->Cell(0, 6, 'Generated on: ' . date('F j, Y \a\t g:i A'), 0, 1, 'L');
+            $pdf->Ln(3);
+            
+            // Summary section
+            if ($summary && $summary['total_accounts'] > 0) {
+                $pdf->SetFont('helvetica', 'B', 11);
+                $pdf->Cell(0, 8, 'SUMMARY', 0, 1, 'L');
+                $pdf->SetFont('helvetica', '', 9);
+                
+                // Summary table
+                $pdf->Cell(50, 6, 'Total Accounts:', 0, 0);
+                $pdf->Cell(30, 6, number_format($summary['total_accounts']), 0, 1);
+                
+                $pdf->Cell(50, 6, 'Total Debits:', 0, 0);
+                $pdf->Cell(30, 6, '₱' . number_format($summary['total_debits'], 2), 0, 1);
+                
+                $pdf->Cell(50, 6, 'Total Credits:', 0, 0);
+                $pdf->Cell(30, 6, '₱' . number_format($summary['total_credits'], 2), 0, 1);
+                
+                $pdf->Cell(50, 6, 'Net Balance:', 0, 0);
+                $pdf->Cell(30, 6, '₱' . number_format($summary['net_balance'], 2), 0, 1);
+                
+                $pdf->Ln(5);
             }
             
-            // Output PDF
-            $filename = 'trial_balance_report_' . date('Y-m-d_H-i-s') . '.pdf';
-            $pdf->Output($filename, 'D');
+            // Table header
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetFillColor(240, 240, 240);
+            
+            // Define column widths for landscape A4
+            $colWidths = [25, 60, 30, 25, 25, 25];
+            $headers = ['Account', 'Account Name', 'Type', 'Debits', 'Credits', 'Balance'];
+            
+            // Header row
+            foreach ($headers as $i => $header) {
+                $pdf->Cell($colWidths[$i], 8, $header, 1, 0, 'C', true);
+            }
+            $pdf->Ln();
+            
+            // Table data
+            $pdf->SetFont('helvetica', '', 8);
+            $pdf->SetFillColor(255, 255, 255);
+            
+            $rowCount = 0;
+            foreach ($reportData as $row) {
+                // Check if we need a new page
+                if ($pdf->GetY() > 180) {
+                    $pdf->AddPage();
+                    // Repeat header on new page
+                    $pdf->SetFont('helvetica', 'B', 9);
+                    $pdf->SetFillColor(240, 240, 240);
+                    foreach ($headers as $i => $header) {
+                        $pdf->Cell($colWidths[$i], 8, $header, 1, 0, 'C', true);
+                    }
+                    $pdf->Ln();
+                    $pdf->SetFont('helvetica', '', 8);
+                    $pdf->SetFillColor(255, 255, 255);
+                }
+                
+                // Data row
+                $pdf->Cell($colWidths[0], 6, $row['account_code'], 1, 0, 'L');
+                $pdf->Cell($colWidths[1], 6, $row['account_name'], 1, 0, 'L');
+                $pdf->Cell($colWidths[2], 6, $row['account_type'], 1, 0, 'L');
+                $pdf->Cell($colWidths[3], 6, '₱' . number_format($row['total_debits'], 2), 1, 0, 'R');
+                $pdf->Cell($colWidths[4], 6, '₱' . number_format($row['total_credits'], 2), 1, 0, 'R');
+                $pdf->Cell($colWidths[5], 6, '₱' . number_format($row['balance'], 2), 1, 1, 'R');
+                
+                $rowCount++;
+            }
+            
+            // Footer with record count
+            $pdf->Ln(5);
+            $pdf->SetFont('helvetica', '', 9);
+            $pdf->Cell(0, 6, 'Total Records: ' . $rowCount, 0, 1, 'L');
+            
+            // Set headers for inline viewing
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="trial_balance_report_' . date('Y-m-d_H-i-s') . '.pdf"');
+            header('Cache-Control: public, must-revalidate, max-age=0');
+            header('Pragma: public');
+            
+            // Output PDF for inline viewing
+            $pdf->Output('trial_balance_report_' . date('Y-m-d_H-i-s') . '.pdf', 'I');
             
         } catch (Exception $e) {
             error_log("Error exporting trial balance PDF: " . $e->getMessage());
@@ -161,8 +221,13 @@ class TrialBalanceReportController extends Controller {
             $reportData = $this->model->generateReport($filters);
             $summary = $this->model->getSummaryStats($filters);
             
+            // Check if PhpSpreadsheet is available
+            if (!class_exists('PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+                throw new Exception('PhpSpreadsheet library not found. Please install it via composer.');
+            }
+            
             // Create new Spreadsheet object
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             
             // Set document properties
@@ -173,87 +238,126 @@ class TrialBalanceReportController extends Controller {
                 ->setSubject('Trial Balance Report')
                 ->setDescription('Trial Balance Report generated by EARS System');
             
-            // Add title
+            // Set title
             $sheet->setCellValue('A1', 'TRIAL BALANCE REPORT');
             $sheet->mergeCells('A1:F1');
-            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-            $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
-            // Add generation date
-            $sheet->setCellValue('A2', 'Generated on: ' . date('Y-m-d H:i:s'));
-            $sheet->mergeCells('A2:F2');
-            $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            // Set report period
+            $row = 3;
+            $periodText = 'Report Period: ';
+            if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+                $periodText .= date('F j, Y', strtotime($filters['start_date'])) . ' to ' . date('F j, Y', strtotime($filters['end_date']));
+            } else {
+                $periodText .= 'All Periods';
+            }
+            $sheet->setCellValue('A' . $row, $periodText);
+            $sheet->mergeCells('A' . $row . ':F' . $row);
+            $row++;
             
-            // Add summary
-            $sheet->setCellValue('A4', 'Summary:');
-            $sheet->getStyle('A4')->getFont()->setBold(true);
-            $sheet->setCellValue('A5', 'Total Accounts:');
-            $sheet->setCellValue('B5', $summary['total_accounts']);
-            $sheet->setCellValue('A6', 'Total Debits:');
-            $sheet->setCellValue('B6', $summary['total_debits']);
-            $sheet->setCellValue('A7', 'Total Credits:');
-            $sheet->setCellValue('B7', $summary['total_credits']);
-            $sheet->setCellValue('A8', 'Net Balance:');
-            $sheet->setCellValue('B8', $summary['net_balance']);
+            $sheet->setCellValue('A' . $row, 'Generated on: ' . date('F j, Y \a\t g:i A'));
+            $sheet->mergeCells('A' . $row . ':F' . $row);
+            $row += 2;
             
-            // Add table headers
-            $sheet->setCellValue('A10', 'Account Code');
-            $sheet->setCellValue('B10', 'Account Name');
-            $sheet->setCellValue('C10', 'Account Type');
-            $sheet->setCellValue('D10', 'Total Debits');
-            $sheet->setCellValue('E10', 'Total Credits');
-            $sheet->setCellValue('F10', 'Balance');
-            
-            // Style headers
-            $headerStyle = [
-                'font' => ['bold' => true],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                'borders' => [
-                    'allBorders' => ['borderStyle' => Border::BORDER_THIN]
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'E0E0E0']
-                ]
-            ];
-            $sheet->getStyle('A10:F10')->applyFromArray($headerStyle);
-            
-            // Add data
-            $row = 11;
-            foreach ($reportData as $data) {
-                $sheet->setCellValue('A' . $row, $data['account_code']);
-                $sheet->setCellValue('B' . $row, $data['account_name']);
-                $sheet->setCellValue('C' . $row, $data['account_type']);
-                $sheet->setCellValue('D' . $row, $data['total_debits']);
-                $sheet->setCellValue('E' . $row, $data['total_credits']);
-                $sheet->setCellValue('F' . $row, $data['balance']);
+            // Summary section
+            if ($summary && isset($summary['total_accounts']) && $summary['total_accounts'] > 0) {
+                $sheet->setCellValue('A' . $row, 'SUMMARY');
+                $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
                 $row++;
+                
+                // Summary table with better formatting
+                $summaryData = [
+                    ['Total Accounts', $summary['total_accounts']],
+                    ['Total Debits', '₱' . number_format($summary['total_debits'], 2)],
+                    ['Total Credits', '₱' . number_format($summary['total_credits'], 2)],
+                    ['Net Balance', '₱' . number_format($summary['net_balance'], 2)]
+                ];
+                
+                foreach ($summaryData as $summaryRow) {
+                    $sheet->setCellValue('A' . $row, $summaryRow[0]);
+                    $sheet->setCellValue('B' . $row, $summaryRow[1]);
+                    $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+                    $row++;
+                }
+                $row += 2;
             }
             
-            // Style data
-            $dataStyle = [
-                'borders' => [
-                    'allBorders' => ['borderStyle' => Border::BORDER_THIN]
-                ]
-            ];
-            $sheet->getStyle('A11:F' . ($row - 1))->applyFromArray($dataStyle);
+            // Table header with better styling
+            $headers = ['Account Code', 'Account Name', 'Account Type', 'Total Debits', 'Total Credits', 'Balance'];
+            $col = 'A';
+            foreach ($headers as $header) {
+                $sheet->setCellValue($col . $row, $header);
+                $sheet->getStyle($col . $row)->getFont()->setBold(true);
+                $sheet->getStyle($col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E6E6E6');
+                $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $col++;
+            }
+            $row++;
             
-            // Format numbers
-            $sheet->getStyle('D11:F' . ($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+            // Table data with proper formatting
+            $dataStartRow = $row;
+            if (is_array($reportData) && !empty($reportData)) {
+                foreach ($reportData as $data) {
+                    $sheet->setCellValue('A' . $row, $data['account_code']);
+                    $sheet->setCellValue('B' . $row, $data['account_name']);
+                    $sheet->setCellValue('C' . $row, $data['account_type']);
+                    $sheet->setCellValue('D' . $row, $data['total_debits']);
+                    $sheet->setCellValue('E' . $row, $data['total_credits']);
+                    $sheet->setCellValue('F' . $row, $data['balance']);
+                    $row++;
+                }
+            }
+            
+            // Format amount columns as currency
+            $amountColumns = ['D', 'E', 'F'];
+            if ($dataStartRow < $row) {
+                foreach ($amountColumns as $col) {
+                    $sheet->getStyle($col . $dataStartRow . ':' . $col . ($row - 1))
+                        ->getNumberFormat()
+                        ->setFormatCode('#,##0.00');
+                }
+            }
             
             // Auto-size columns
             foreach (range('A', 'F') as $col) {
                 $sheet->getColumnDimension($col)->setAutoSize(true);
             }
             
-            // Create Excel file
-            $writer = new Xlsx($spreadsheet);
-            $filename = 'trial_balance_report_' . date('Y-m-d_H-i-s') . '.xlsx';
+            // Add borders to data table
+            $lastRow = $row - 1;
+            if ($dataStartRow <= $lastRow) {
+                $sheet->getStyle('A' . ($dataStartRow - 1) . ':F' . $lastRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                
+                // Add alternating row colors for better readability
+                for ($i = $dataStartRow; $i <= $lastRow; $i++) {
+                    if ($i % 2 == 0) {
+                        $sheet->getStyle('A' . $i . ':F' . $i)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F9F9F9');
+                    }
+                }
+                
+                // Add total row
+                $row++;
+                $sheet->setCellValue('A' . $row, 'TOTAL');
+                $sheet->mergeCells('A' . $row . ':C' . $row);
+                $sheet->setCellValue('D' . $row, '=SUM(D' . $dataStartRow . ':D' . ($row - 1) . ')');
+                $sheet->setCellValue('E' . $row, '=SUM(E' . $dataStartRow . ':E' . ($row - 1) . ')');
+                $sheet->setCellValue('F' . $row, '=SUM(F' . $dataStartRow . ':F' . ($row - 1) . ')');
+                $sheet->getStyle('A' . $row . ':F' . $row)->getFont()->setBold(true);
+                $sheet->getStyle('A' . $row . ':F' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('D9D9D9');
+                foreach ($amountColumns as $col) {
+                    $sheet->getStyle($col . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+                }
+            }
+            
+            // Create the Excel file
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             
             // Set headers for download
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment;filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
+            header('Content-Disposition: attachment; filename="trial_balance_report_' . date('Y-m-d_H-i-s') . '.xlsx"');
+            header('Cache-Control: no-cache, must-revalidate');
+            header('Pragma: no-cache');
             
             $writer->save('php://output');
             

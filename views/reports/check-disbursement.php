@@ -103,9 +103,9 @@
                                                 <button type="submit" class="btn btn-primary">
                                                     <i class="bi bi-search"></i> Generate Report
                                                 </button>
-                                                <button type="button" class="btn btn-success" onclick="exportReport('excel')">
+                                              <!--   <button type="button" class="btn btn-success" onclick="exportReport('excel')">
                                                     <i class="bi bi-file-earmark-excel"></i> Export Excel
-                                                </button>
+                                                </button> -->
                                                 <button type="button" class="btn btn-danger" onclick="exportReport('pdf')">
                                                     <i class="bi bi-file-earmark-pdf"></i> Export PDF
                                                 </button>
@@ -119,7 +119,7 @@
 
                     <!-- Summary Cards -->
                     <div class="row mb-4" id="summaryCards" style="display: none;">
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card bg-primary text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Total Transactions</h5>
@@ -127,7 +127,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card bg-success text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Total Amount</h5>
@@ -135,7 +135,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <!-- <div class="col-md-3">
                             <div class="card bg-info text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Average Amount</h5>
@@ -150,79 +150,21 @@
                                     <h3 id="maxAmount">₱0.00</h3>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
 
-                    <!-- Charts Section -->
-                    <div class="row mb-4" id="chartsSection" style="display: none;">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title">Bank Distribution</h5>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="bankChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title">Account Distribution</h5>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="accountChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        
 
                     <!-- Data Table -->
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title">Report Data</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="loadingSpinner" class="text-center" style="display: none;">
-                                        <div class="spinner-border" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                    </div>
-                                    <div id="reportData" style="display: none;">
-                                        <div class="table-responsive">
-                                            <table class="table table-striped table-bordered" id="reportTable">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Date</th>
-                                                        <th>Reference No</th>
-                                                        <th>Check Number</th>
-                                                        <th>Bank</th>
-                                                        <th>Payee</th>
-                                                        <th>Account</th>
-                                                        <th>Amount</th>
-                                                        <th>Status</th>
-                                                        <th>Created By</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="reportTableBody">
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div id="noDataMessage" class="text-center" style="display: none;">
-                                        <p class="text-muted">No data found for the selected criteria.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 $(document).ready(function() {
@@ -302,13 +244,18 @@ function generateReport() {
 }
 
 function displayReportData(response) {
+    console.log('Displaying report data:', response);
+    
     if (response.data && response.data.length > 0) {
+        console.log('Found', response.data.length, 'records');
+        
         // Display summary cards
         if (response.summary) {
+            console.log('Summary:', response.summary);
             $('#totalTransactions').text(response.summary.total_transactions || 0);
-            $('#totalAmount').text('₱' + (response.summary.total_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
-            $('#averageAmount').text('₱' + (response.summary.average_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
-            $('#maxAmount').text('₱' + (response.summary.max_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
+            $('#totalAmount').text(parseFloat(response.summary.total_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
+            $('#averageAmount').text(parseFloat(response.summary.average_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
+            $('#maxAmount').text(parseFloat(response.summary.max_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
             $('#summaryCards').show();
         }
 
@@ -333,14 +280,16 @@ function displayReportData(response) {
             tr.append('<td>' + (row.bank_name || '') + '</td>');
             tr.append('<td>' + (row.payee_name || '') + '</td>');
             tr.append('<td>' + (row.account_code || '') + ' - ' + (row.account_name || '') + '</td>');
-            tr.append('<td class="text-end">₱' + parseFloat(row.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
+            tr.append('<td class="text-end">' + parseFloat(row.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
             tr.append('<td><span class="badge bg-' + getStatusColor(row.status) + '">' + (row.status || '') + '</span></td>');
             tr.append('<td>' + (row.created_by || '') + '</td>');
             tbody.append(tr);
         });
         
         $('#reportData').show();
+        console.log('Report data displayed successfully');
     } else {
+        console.log('No data found, showing no data message');
         $('#noDataMessage').show();
     }
 }
@@ -348,16 +297,17 @@ function displayReportData(response) {
 function createBankChart(data) {
     const ctx = document.getElementById('bankChart').getContext('2d');
     
-    if (window.bankChart) {
+    // Safely destroy existing chart
+    if (window.bankChart && typeof window.bankChart.destroy === 'function') {
         window.bankChart.destroy();
     }
     
     window.bankChart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: data.map(item => item.bank_name),
+            labels: data.map(item => item.bank_name || 'Unknown'),
             datasets: [{
-                data: data.map(item => item.total_amount),
+                data: data.map(item => parseFloat(item.total_amount || 0)),
                 backgroundColor: [
                     '#FF6384',
                     '#36A2EB',
@@ -372,6 +322,13 @@ function createBankChart(data) {
             plugins: {
                 legend: {
                     position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + parseFloat(context.parsed).toLocaleString('en-US', {minimumFractionDigits: 2});
+                        }
+                    }
                 }
             }
         }
@@ -381,17 +338,18 @@ function createBankChart(data) {
 function createAccountChart(data) {
     const ctx = document.getElementById('accountChart').getContext('2d');
     
-    if (window.accountChart) {
+    // Safely destroy existing chart
+    if (window.accountChart && typeof window.accountChart.destroy === 'function') {
         window.accountChart.destroy();
     }
     
     window.accountChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.map(item => item.account_code + ' - ' + item.account_name),
+            labels: data.map(item => (item.account_code || '') + ' - ' + (item.account_name || 'Unknown')),
             datasets: [{
                 label: 'Total Amount',
-                data: data.map(item => item.total_amount),
+                data: data.map(item => parseFloat(item.total_amount || 0)),
                 backgroundColor: '#36A2EB'
             }]
         },
@@ -399,12 +357,24 @@ function createAccountChart(data) {
             responsive: true,
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString();
+                        }
+                    }
                 }
             },
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Total Amount: ' + parseFloat(context.parsed.y).toLocaleString('en-US', {minimumFractionDigits: 2});
+                        }
+                    }
                 }
             }
         }
@@ -412,14 +382,21 @@ function createAccountChart(data) {
 }
 
 function exportReport(format) {
+    // Get form data
     const formData = new FormData($('#reportForm')[0]);
-    const params = new URLSearchParams();
     
+    // Build URL parameters
+    const params = new URLSearchParams();
     for (let [key, value] of formData.entries()) {
-        params.append(key, value);
+        if (value) {
+            params.append(key, value);
+        }
     }
     
+    // Create export URL
     const url = APP_URL + '/api/check-disbursement-report/export' + (format === 'pdf' ? 'PDF' : 'Excel') + '?' + params.toString();
+    
+    // Open in new window/tab
     window.open(url, '_blank');
 }
 
@@ -449,4 +426,51 @@ function showAlert(type, message) {
     `;
     $('.card-body').first().prepend(alertHtml);
 }
+
+function testReport() {
+    console.log('=== TEST REPORT FUNCTION CALLED ===');
+    console.log('Testing report generation...');
+    
+    // Check if form exists
+    const form = $('#reportForm');
+    if (form.length === 0) {
+        console.error('Form not found!');
+        alert('Error: Report form not found!');
+        return;
+    }
+    
+    console.log('Form found, getting form data...');
+    
+    // Check current form values
+    const formData = new FormData(form[0]);
+    console.log('Form data entries:');
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ':', value);
+    }
+    
+    // Test individual form fields
+    console.log('Individual field values:');
+    console.log('Start Date:', $('#start_date').val());
+    console.log('End Date:', $('#end_date').val());
+    console.log('Account ID:', $('#account_id').val());
+    console.log('Supplier ID:', $('#supplier_id').val());
+    console.log('Project ID:', $('#project_id').val());
+    console.log('Department ID:', $('#department_id').val());
+    console.log('Payment Form:', $('#payment_form').val());
+    console.log('Status:', $('#status').val());
+    
+    // Test API URL
+    const apiUrl = APP_URL + '/api/check-disbursement-report/generate';
+    console.log('API URL would be:', apiUrl);
+    
+    // Show success message
+    showAlert('success', 'Test completed! Check browser console for details.');
+    console.log('=== TEST REPORT FUNCTION COMPLETED ===');
+}
+
+// Global test function for debugging
+window.testCheckDisbursementReport = function() {
+    console.log('Global test function called');
+    testReport();
+};
 </script>

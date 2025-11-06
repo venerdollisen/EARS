@@ -173,16 +173,8 @@ class CashDisbursementController extends Controller {
                 }
             } catch (Exception $e) {}
             
-            // Calculate total amount from distributions
-            $totalAmount = 0;
-            foreach ($data['account_distribution'] as $distribution) {
-                if (!empty($distribution['debit'])) {
-                    $totalAmount += floatval($distribution['debit']);
-                }
-                if (!empty($distribution['credit'])) {
-                    $totalAmount += floatval($distribution['credit']);
-                }
-            }
+            // Calculate total amount from distributions (use balanced amount)
+            $totalAmount = $totalDebit; // Since totalDebit equals totalCredit, we can use either
             
             // Prepare header data for new structure
             $headerData = [
@@ -219,6 +211,7 @@ class CashDisbursementController extends Controller {
                     $distributions[] = [
                         'account_id' => intval($distribution['account_id']),
                         'amount' => floatval($distribution['debit']),
+                        'transaction_type' => 'debit', // Explicitly set transaction type
                         'description' => $distribution['description'] ?? $data['particulars'],
                         'project_id' => !empty($distribution['project_id']) ? intval($distribution['project_id']) : null,
                         'department_id' => !empty($distribution['department_id']) ? intval($distribution['department_id']) : null,
@@ -231,6 +224,7 @@ class CashDisbursementController extends Controller {
                     $distributions[] = [
                         'account_id' => intval($distribution['account_id']),
                         'amount' => floatval($distribution['credit']), // Positive for credit
+                        'transaction_type' => 'credit', // Explicitly set transaction type
                         'description' => $distribution['description'] ?? $data['particulars'],
                         'project_id' => !empty($distribution['project_id']) ? intval($distribution['project_id']) : null,
                         'department_id' => !empty($distribution['department_id']) ? intval($distribution['department_id']) : null,

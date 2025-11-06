@@ -1,7 +1,5 @@
 <?php $isStatusLocked = isset($user['role']) && in_array($user['role'], ['user','assistant']); ?>
-<?php
-// Check Disbursement Entry View (modernized like cash disbursement)
-?>
+
 
     <div class="row">
         <div class="col-12">

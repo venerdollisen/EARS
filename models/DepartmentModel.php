@@ -50,16 +50,16 @@ class DepartmentModel extends Model {
     
     public function deleteDepartment($id) {
         // Check if department is being used in transactions
-        $sql = "SELECT COUNT(*) as count FROM transaction_distributions td 
-                JOIN transaction_headers th ON td.header_id = th.id 
-                WHERE td.department_id = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$id]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        // $sql = "SELECT COUNT(*) as count FROM transaction_distributions td 
+        //         JOIN transaction_headers th ON td.header_id = th.id 
+        //         WHERE td.department_id = ?";
+        // $stmt = $this->db->prepare($sql);
+        // $stmt->execute([$id]);
+        // $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($result['count'] > 0) {
-            throw new Exception('Cannot delete department. It is being used in transactions.');
-        }
+        // if ($result['count'] > 0) {
+        //     throw new Exception('Cannot delete department. It is being used in transactions.');
+        // }
         
         // Soft delete - set status to inactive
         return $this->update($id, [

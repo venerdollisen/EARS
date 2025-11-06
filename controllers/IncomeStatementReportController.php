@@ -2,12 +2,6 @@
 require_once 'core/Controller.php';
 require_once 'models/IncomeStatementReportModel.php';
 
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-
 class IncomeStatementReportController extends Controller {
     
     private $model;
@@ -91,7 +85,7 @@ class IncomeStatementReportController extends Controller {
             $pdf->SetTitle('Income Statement Report');
             
             // Set default header data
-            $pdf->SetHeaderData('', 0, 'Income Statement Report', 'Generated on ' . date('Y-m-d H:i:s'));
+            $pdf->SetHeaderData('', 0, 'EARS System', 'Income Statement Report');
             
             // Set header and footer fonts
             $pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
@@ -114,30 +108,61 @@ class IncomeStatementReportController extends Controller {
             // Add a page
             $pdf->AddPage();
             
-            // Set font
-            $pdf->SetFont('helvetica', '', 10);
-            
-            // Add summary information
-            $pdf->Cell(0, 10, 'Summary:', 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Total Revenue: ₱' . number_format($summary['total_revenue'], 2), 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Total Expenses: ₱' . number_format($summary['total_expenses'], 2), 0, 1, 'L');
-            $pdf->Cell(0, 8, 'Net Income: ₱' . number_format($summary['net_income'], 2), 0, 1, 'L');
+            // Title
+            $pdf->SetFont('helvetica', 'B', 16);
+            $pdf->Cell(0, 10, 'INCOME STATEMENT REPORT', 0, 1, 'C');
             $pdf->Ln(5);
+            
+            // Report period
+            $pdf->SetFont('helvetica', 'B', 11);
+            $periodText = 'Report Period: ';
+            if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+                $periodText .= date('F j, Y', strtotime($filters['start_date'])) . ' to ' . date('F j, Y', strtotime($filters['end_date']));
+            } else {
+                $periodText .= 'All Periods';
+            }
+            $pdf->Cell(0, 8, $periodText, 0, 1, 'L');
+            
+            // Generated date
+            $pdf->SetFont('helvetica', '', 9);
+            $pdf->Cell(0, 6, 'Generated on: ' . date('F j, Y \a\t g:i A'), 0, 1, 'L');
+            $pdf->Ln(3);
+            
+            // Summary section
+            if ($summary) {
+                $pdf->SetFont('helvetica', 'B', 11);
+                $pdf->Cell(0, 8, 'SUMMARY', 0, 1, 'L');
+                $pdf->SetFont('helvetica', '', 9);
+                
+                // Summary table
+                $pdf->Cell(50, 6, 'Total Revenue:', 0, 0);
+                $pdf->Cell(30, 6, '₱' . number_format($summary['total_revenue'], 2), 0, 1);
+                
+                $pdf->Cell(50, 6, 'Total Expenses:', 0, 0);
+                $pdf->Cell(30, 6, '₱' . number_format($summary['total_expenses'], 2), 0, 1);
+                
+                $pdf->Cell(50, 6, 'Net Income:', 0, 0);
+                $pdf->Cell(30, 6, '₱' . number_format($summary['net_income'], 2), 0, 1);
+                
+                $pdf->Ln(5);
+            }
             
             // Add Revenue section
             $pdf->SetFont('helvetica', 'B', 12);
             $pdf->Cell(0, 10, 'REVENUE', 0, 1, 'L');
             $pdf->SetFont('helvetica', 'B', 9);
-            $pdf->Cell(25, 8, 'Account', 1, 0, 'C');
-            $pdf->Cell(60, 8, 'Account Name', 1, 0, 'C');
-            $pdf->Cell(30, 8, 'Type', 1, 0, 'C');
-            $pdf->Cell(35, 8, 'Total Revenue', 1, 1, 'C');
+            $pdf->SetFillColor(240, 240, 240);
+            $pdf->Cell(25, 8, 'Account', 1, 0, 'C', true);
+            $pdf->Cell(60, 8, 'Account Name', 1, 0, 'C', true);
+            $pdf->Cell(30, 8, 'Type', 1, 0, 'C', true);
+            $pdf->Cell(35, 8, 'Total Revenue', 1, 1, 'C', true);
             
             // Add Revenue data
             $pdf->SetFont('helvetica', '', 8);
+            $pdf->SetFillColor(255, 255, 255);
             foreach ($reportData['revenue'] as $row) {
                 $pdf->Cell(25, 6, $row['account_code'], 1, 0, 'L');
-                $pdf->Cell(60, 6, substr($row['account_name'], 0, 25), 1, 0, 'L');
+                $pdf->Cell(60, 6, $row['account_name'], 1, 0, 'L');
                 $pdf->Cell(30, 6, $row['account_type'], 1, 0, 'L');
                 $pdf->Cell(35, 6, '₱' . number_format($row['total_revenue'], 2), 1, 1, 'R');
             }
@@ -148,23 +173,30 @@ class IncomeStatementReportController extends Controller {
             $pdf->SetFont('helvetica', 'B', 12);
             $pdf->Cell(0, 10, 'EXPENSES', 0, 1, 'L');
             $pdf->SetFont('helvetica', 'B', 9);
-            $pdf->Cell(25, 8, 'Account', 1, 0, 'C');
-            $pdf->Cell(60, 8, 'Account Name', 1, 0, 'C');
-            $pdf->Cell(30, 8, 'Type', 1, 0, 'C');
-            $pdf->Cell(35, 8, 'Total Expense', 1, 1, 'C');
+            $pdf->SetFillColor(240, 240, 240);
+            $pdf->Cell(25, 8, 'Account', 1, 0, 'C', true);
+            $pdf->Cell(60, 8, 'Account Name', 1, 0, 'C', true);
+            $pdf->Cell(30, 8, 'Type', 1, 0, 'C', true);
+            $pdf->Cell(35, 8, 'Total Expense', 1, 1, 'C', true);
             
             // Add Expenses data
             $pdf->SetFont('helvetica', '', 8);
+            $pdf->SetFillColor(255, 255, 255);
             foreach ($reportData['expenses'] as $row) {
                 $pdf->Cell(25, 6, $row['account_code'], 1, 0, 'L');
-                $pdf->Cell(60, 6, substr($row['account_name'], 0, 25), 1, 0, 'L');
+                $pdf->Cell(60, 6, $row['account_name'], 1, 0, 'L');
                 $pdf->Cell(30, 6, $row['account_type'], 1, 0, 'L');
                 $pdf->Cell(35, 6, '₱' . number_format($row['total_expense'], 2), 1, 1, 'R');
             }
             
-            // Output PDF
-            $filename = 'income_statement_report_' . date('Y-m-d_H-i-s') . '.pdf';
-            $pdf->Output($filename, 'D');
+            // Set headers for inline viewing
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="income_statement_report_' . date('Y-m-d_H-i-s') . '.pdf"');
+            header('Cache-Control: public, must-revalidate, max-age=0');
+            header('Pragma: public');
+            
+            // Output PDF for inline viewing
+            $pdf->Output('income_statement_report_' . date('Y-m-d_H-i-s') . '.pdf', 'I');
             
         } catch (Exception $e) {
             error_log("Error exporting income statement PDF: " . $e->getMessage());
@@ -184,8 +216,13 @@ class IncomeStatementReportController extends Controller {
             $reportData = $this->model->generateReport($filters);
             $summary = $this->model->getSummaryStats($filters);
             
+            // Check if PhpSpreadsheet is available
+            if (!class_exists('PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+                throw new Exception('PhpSpreadsheet library not found. Please install it via composer.');
+            }
+            
             // Create new Spreadsheet object
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
             
             // Set document properties
@@ -200,12 +237,12 @@ class IncomeStatementReportController extends Controller {
             $sheet->setCellValue('A1', 'INCOME STATEMENT REPORT');
             $sheet->mergeCells('A1:D1');
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-            $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
             // Add generation date
             $sheet->setCellValue('A2', 'Generated on: ' . date('Y-m-d H:i:s'));
             $sheet->mergeCells('A2:D2');
-            $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
             // Add summary
             $sheet->setCellValue('A4', 'Summary:');
@@ -230,12 +267,12 @@ class IncomeStatementReportController extends Controller {
             // Style headers
             $headerStyle = [
                 'font' => ['bold' => true],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
                 'borders' => [
-                    'allBorders' => ['borderStyle' => Border::BORDER_THIN]
+                    'allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]
                 ],
                 'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                     'startColor' => ['rgb' => 'E0E0E0']
                 ]
             ];
@@ -243,12 +280,14 @@ class IncomeStatementReportController extends Controller {
             
             // Add Revenue data
             $row = 11;
-            foreach ($reportData['revenue'] as $data) {
-                $sheet->setCellValue('A' . $row, $data['account_code']);
-                $sheet->setCellValue('B' . $row, $data['account_name']);
-                $sheet->setCellValue('C' . $row, $data['account_type']);
-                $sheet->setCellValue('D' . $row, $data['total_revenue']);
-                $row++;
+            if (isset($reportData['revenue']) && is_array($reportData['revenue'])) {
+                foreach ($reportData['revenue'] as $data) {
+                    $sheet->setCellValue('A' . $row, $data['account_code']);
+                    $sheet->setCellValue('B' . $row, $data['account_name']);
+                    $sheet->setCellValue('C' . $row, $data['account_type']);
+                    $sheet->setCellValue('D' . $row, $data['total_revenue']);
+                    $row++;
+                }
             }
             
             $row += 2;
@@ -268,24 +307,28 @@ class IncomeStatementReportController extends Controller {
             $row++;
             
             // Add Expenses data
-            foreach ($reportData['expenses'] as $data) {
-                $sheet->setCellValue('A' . $row, $data['account_code']);
-                $sheet->setCellValue('B' . $row, $data['account_name']);
-                $sheet->setCellValue('C' . $row, $data['account_type']);
-                $sheet->setCellValue('D' . $row, $data['total_expense']);
-                $row++;
+            if (isset($reportData['expenses']) && is_array($reportData['expenses'])) {
+                foreach ($reportData['expenses'] as $data) {
+                    $sheet->setCellValue('A' . $row, $data['account_code']);
+                    $sheet->setCellValue('B' . $row, $data['account_name']);
+                    $sheet->setCellValue('C' . $row, $data['account_type']);
+                    $sheet->setCellValue('D' . $row, $data['total_expense']);
+                    $row++;
+                }
             }
             
             // Style data
             $dataStyle = [
                 'borders' => [
-                    'allBorders' => ['borderStyle' => Border::BORDER_THIN]
+                    'allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]
                 ]
             ];
-            $sheet->getStyle('A11:D' . ($row - 1))->applyFromArray($dataStyle);
-            
-            // Format numbers
-            $sheet->getStyle('D11:D' . ($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+            if ($row > 11) {
+                $sheet->getStyle('A11:D' . ($row - 1))->applyFromArray($dataStyle);
+                
+                // Format numbers
+                $sheet->getStyle('D11:D' . ($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+            }
             $sheet->getStyle('B5:B7')->getNumberFormat()->setFormatCode('#,##0.00');
             
             // Auto-size columns
@@ -294,7 +337,7 @@ class IncomeStatementReportController extends Controller {
             }
             
             // Create Excel file
-            $writer = new Xlsx($spreadsheet);
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             $filename = 'income_statement_report_' . date('Y-m-d_H-i-s') . '.xlsx';
             
             // Set headers for download

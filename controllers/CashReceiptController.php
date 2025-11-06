@@ -173,8 +173,8 @@ class CashReceiptController extends Controller {
                 }
             } catch (Exception $e) {}
             
-            // Calculate total amount - for cash receipts, total is sum of all amounts
-            $totalAmount = $totalDebit + $totalCredit;
+            // Calculate total amount - for cash receipts, use balanced amount
+            $totalAmount = $totalDebit; // Since totalDebit equals totalCredit, we can use either
             
             // Prepare header data for new structure
             $headerData = [
@@ -203,6 +203,7 @@ class CashReceiptController extends Controller {
                     $distributions[] = [
                         'account_id' => intval($distribution['account_id']),
                         'amount' => floatval($distribution['debit']),
+                        'transaction_type' => 'debit', // Explicitly set transaction type
                         'description' => $distribution['description'] ?? $data['payment_description'],
                         'project_id' => !empty($distribution['project_id']) ? intval($distribution['project_id']) : null,
                         'department_id' => !empty($distribution['department_id']) ? intval($distribution['department_id']) : null,
@@ -215,6 +216,7 @@ class CashReceiptController extends Controller {
                     $distributions[] = [
                         'account_id' => intval($distribution['account_id']),
                         'amount' => floatval($distribution['credit']),
+                        'transaction_type' => 'credit', // Explicitly set transaction type
                         'description' => $distribution['description'] ?? $data['payment_description'],
                         'project_id' => !empty($distribution['project_id']) ? intval($distribution['project_id']) : null,
                         'department_id' => !empty($distribution['department_id']) ? intval($distribution['department_id']) : null,

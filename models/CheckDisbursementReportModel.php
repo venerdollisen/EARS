@@ -6,6 +6,61 @@ class CheckDisbursementReportModel extends BaseReportModel {
     /**
      * Generate check disbursement report data
      */
+    protected function buildWhereClause($filters) {
+        $whereConditions = [];
+        $params = [];
+        
+        if (!empty($filters['start_date'])) {
+            $whereConditions[] = "DATE(chd.transaction_date) >= :start_date";
+            $params[':start_date'] = $filters['start_date'];
+        }
+        
+        if (!empty($filters['end_date'])) {
+            $whereConditions[] = "DATE(chd.transaction_date) <= :end_date";
+            $params[':end_date'] = $filters['end_date'];
+        }
+        
+        if (!empty($filters['account_id'])) {
+            $whereConditions[] = "chdd.account_id = :account_id";
+            $params[':account_id'] = $filters['account_id'];
+        }
+        
+        if (!empty($filters['supplier_id'])) {
+            $whereConditions[] = "chdd.supplier_id = :supplier_id";
+            $params[':supplier_id'] = $filters['supplier_id'];
+        }
+        
+        if (!empty($filters['project_id'])) {
+            $whereConditions[] = "chdd.project_id = :project_id";
+            $params[':project_id'] = $filters['project_id'];
+        }
+        
+        if (!empty($filters['department_id'])) {
+            $whereConditions[] = "chdd.department_id = :department_id";
+            $params[':department_id'] = $filters['department_id'];
+        }
+        
+        if (!empty($filters['payment_form'])) {
+            $whereConditions[] = "cr.payment_form = :payment_form";
+            $params[':payment_form'] = $filters['payment_form'];
+        }
+        
+        if (!empty($filters['status'])) {
+            $whereConditions[] = "cr.status = :status";
+            $params[':status'] = $filters['status'];
+        }
+        
+        $whereClause = '';
+        if (!empty($whereConditions)) {
+            $whereClause = ' WHERE ' . implode(' AND ', $whereConditions);
+        }
+        
+        return [
+            'where' => $whereClause,
+            'params' => $params
+        ];
+    }
+
     public function generateReport($filters = []) {
         try {
             $whereClause = $this->buildWhereClause($filters);
@@ -20,6 +75,7 @@ class CheckDisbursementReportModel extends BaseReportModel {
                         chd.check_date,
                         chd.payee_name,
                         chd.status,
+                        s.vat_subject,
                         chd.description as remarks,
                         coa.account_code,
                         coa.account_name,
@@ -36,6 +92,7 @@ class CheckDisbursementReportModel extends BaseReportModel {
                     LEFT JOIN departments d ON chdd.department_id = d.id
                     LEFT JOIN users u ON chd.created_by = u.id
                     {$whereClause['where']}
+                    GROUP BY chd.id
                     ORDER BY chd.transaction_date DESC, chd.id DESC";
             
             $stmt = $this->db->prepare($sql);

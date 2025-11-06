@@ -78,9 +78,9 @@
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr>
+                                   <!--  <tr>
                                         <td colspan="8" class="text-center text-muted">No projects found</td>
-                                    </tr>
+                                    </tr> -->
                                 <?php endif; ?>
                             </tbody>
                         </table>

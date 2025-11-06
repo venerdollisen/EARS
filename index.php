@@ -3,6 +3,9 @@ session_start();
 // Define base path
 define('BASE_PATH', __DIR__);
 
+// Include Composer autoloader
+require_once 'vendor/autoload.php';
+
 // Include configuration
 require_once 'config/database.php';
 require_once 'config/config.php';
@@ -188,6 +191,7 @@ $router->addRoute('/api/cash-receipt-report/exportPDF', 'CashReceiptReportContro
 $router->addRoute('/api/cash-receipt-report/exportExcel', 'CashReceiptReportController@exportExcel');
 $router->addRoute('/api/cash-receipt-report/data-by-payment-form', 'CashReceiptReportController@getDataByPaymentForm');
 $router->addRoute('/api/cash-receipt-report/data-by-account', 'CashReceiptReportController@getDataByAccount');
+$router->addRoute('/api/cash-receipt-report/debug', 'CashReceiptReportController@debug');
 
 $router->addRoute('/cash-disbursement-report', 'CashDisbursementReportController@index');
 $router->addRoute('/api/cash-disbursement-report/generate', 'CashDisbursementReportController@generate');

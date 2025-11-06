@@ -50,7 +50,7 @@ class BaseReportModel extends Model {
      * Get active suppliers for dropdowns
      */
     public function getActiveSuppliers() {
-        $sql = "SELECT id, supplier_name, supplier_code 
+        $sql = "SELECT id, supplier_name 
                 FROM suppliers 
                 WHERE status = 'active' 
                 ORDER BY supplier_name";

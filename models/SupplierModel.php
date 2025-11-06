@@ -53,16 +53,17 @@ class SupplierModel extends Model {
     public function searchSuppliers($searchTerm) {
         $sql = "SELECT * FROM {$this->table} 
                 WHERE status = 'active' 
-                AND (supplier_name LIKE ? OR supplier_code LIKE ? OR contact_person LIKE ?)
+                AND (supplier_name LIKE ? OR contact_person LIKE ?)
                 ORDER BY supplier_name ASC";
         $searchPattern = "%{$searchTerm}%";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$searchPattern, $searchPattern, $searchPattern]);
+        $stmt->execute([$searchPattern, $searchPattern]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function checkSupplierCodeExists($supplierCode, $excludeId = null) {
-        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE supplier_code = ? AND status = 'active'";
+        // Since supplier_code column doesn't exist, we'll check by supplier_name instead
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE supplier_name = ? AND status = 'active'";
         $params = [$supplierCode];
         
         if ($excludeId) {

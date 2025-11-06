@@ -103,12 +103,13 @@
                                                 <button type="submit" class="btn btn-primary">
                                                     <i class="bi bi-search"></i> Generate Report
                                                 </button>
-                                                <button type="button" class="btn btn-success" onclick="exportReport('excel')">
+                                              <!--   <button type="button" class="btn btn-success" onclick="exportReport('excel')">
                                                     <i class="bi bi-file-earmark-excel"></i> Export Excel
-                                                </button>
+                                                </button> -->
                                                 <button type="button" class="btn btn-danger" onclick="exportReport('pdf')">
                                                     <i class="bi bi-file-earmark-pdf"></i> Export PDF
                                                 </button>
+
                                             </div>
                                         </div>
                                     </form>
@@ -119,7 +120,7 @@
 
                     <!-- Summary Cards -->
                     <div class="row mb-4" id="summaryCards" style="display: none;">
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card bg-primary text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Total Transactions</h5>
@@ -127,7 +128,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card bg-success text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Total Amount</h5>
@@ -135,7 +136,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                       <!--  <div class="col-md-3">
                             <div class="card bg-info text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Average Amount</h5>
@@ -150,7 +151,7 @@
                                     <h3 id="maxAmount">₱0.00</h3>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- Charts Section -->
@@ -301,13 +302,18 @@ function generateReport() {
 }
 
 function displayReportData(response) {
+    console.log('Displaying report data:', response);
+    
     if (response.data && response.data.length > 0) {
+        console.log('Found', response.data.length, 'records');
+        
         // Display summary cards
         if (response.summary) {
+            console.log('Summary:', response.summary);
             $('#totalTransactions').text(response.summary.total_transactions || 0);
-            $('#totalAmount').text('₱' + parseFloat(response.summary.total_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
-            $('#averageAmount').text('₱' + parseFloat(response.summary.average_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
-            $('#maxAmount').text('₱' + parseFloat(response.summary.max_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
+            $('#totalAmount').text(parseFloat(response.summary.total_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
+            $('#averageAmount').text(parseFloat(response.summary.average_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
+            $('#maxAmount').text(parseFloat(response.summary.max_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
             $('#summaryCards').show();
         }
 
@@ -330,7 +336,7 @@ function displayReportData(response) {
             tr.append('<td>' + (row.reference_number || '') + '</td>');
             tr.append('<td>' + (row.account_code || '') + ' - ' + (row.account_name || '') + '</td>');
             tr.append('<td>' + (row.supplier_name || '') + '</td>');
-            tr.append('<td class="text-end">₱' + parseFloat(row.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
+            tr.append('<td class="text-end">' + parseFloat(row.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
             tr.append('<td>' + (row.payment_form || '') + '</td>');
             tr.append('<td><span class="badge bg-' + getStatusColor(row.status) + '">' + (row.status || '') + '</span></td>');
             tr.append('<td>' + (row.created_by || '') + '</td>');
@@ -338,7 +344,9 @@ function displayReportData(response) {
         });
         
         $('#reportData').show();
+        console.log('Report data displayed successfully');
     } else {
+        console.log('No data found, showing no data message');
         $('#noDataMessage').show();
     }
 }
@@ -346,7 +354,8 @@ function displayReportData(response) {
 function createPaymentFormChart(data) {
     const ctx = document.getElementById('paymentFormChart').getContext('2d');
     
-    if (window.paymentFormChart) {
+    // Safely destroy existing chart
+    if (window.paymentFormChart && typeof window.paymentFormChart.destroy === 'function') {
         window.paymentFormChart.destroy();
     }
     
@@ -374,7 +383,7 @@ function createPaymentFormChart(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ₱' + parseFloat(context.parsed).toLocaleString('en-US', {minimumFractionDigits: 2});
+                            return context.label + ': ' + parseFloat(context.parsed).toLocaleString('en-US', {minimumFractionDigits: 2});
                         }
                     }
                 }
@@ -386,7 +395,8 @@ function createPaymentFormChart(data) {
 function createAccountChart(data) {
     const ctx = document.getElementById('accountChart').getContext('2d');
     
-    if (window.accountChart) {
+    // Safely destroy existing chart
+    if (window.accountChart && typeof window.accountChart.destroy === 'function') {
         window.accountChart.destroy();
     }
     
@@ -407,7 +417,7 @@ function createAccountChart(data) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '₱' + value.toLocaleString();
+                            return value.toLocaleString();
                         }
                     }
                 }
@@ -419,7 +429,7 @@ function createAccountChart(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return 'Total Amount: ₱' + parseFloat(context.parsed.y).toLocaleString('en-US', {minimumFractionDigits: 2});
+                            return 'Total Amount: ' + parseFloat(context.parsed.y).toLocaleString('en-US', {minimumFractionDigits: 2});
                         }
                     }
                 }
@@ -429,24 +439,22 @@ function createAccountChart(data) {
 }
 
 function exportReport(format) {
+    // Get form data
     const formData = new FormData($('#reportForm')[0]);
-    const params = new URLSearchParams();
     
+    // Build URL parameters
+    const params = new URLSearchParams();
     for (let [key, value] of formData.entries()) {
         if (value) {
             params.append(key, value);
         }
     }
     
+    // Create export URL
     const url = APP_URL + '/api/cash-receipt-report/export' + (format === 'pdf' ? 'PDF' : 'Excel') + '?' + params.toString();
     
-    // Create a temporary link to trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Open in new window/tab
+    window.open(url, '_blank');
 }
 
 function formatDate(dateString) {
@@ -474,5 +482,17 @@ function showAlert(type, message) {
         </div>
     `;
     $('.card-body').first().prepend(alertHtml);
+}
+
+function testReport() {
+    console.log('Testing report generation...');
+    
+    // Check current form values
+    const formData = new FormData($('#reportForm')[0]);
+    console.log('Form data:');
+    for (let [key, value] of formData.entries()) {
+        console.log(key + ':', value);
+    }
+    
 }
 </script>

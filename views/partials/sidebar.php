@@ -1,5 +1,6 @@
 <?php
 // Ensure $user variable is always defined
+// var_dump($user);
 if (!isset($user)) {
     $user = [];
 }
@@ -68,7 +69,7 @@ if (!isset($user)) {
                 <li class="nav-item">
                     <a href="<?=APP_URL?>/file-maintenance/subsidiary-account" class="nav-link">
                         <i class="bi bi-circle"></i>
-                        <span>Subsidiary Account (Suppliers)</span>
+                        <span>Subsidiary Account</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -113,12 +114,12 @@ if (!isset($user)) {
                         <span>Check Disbursement</span>
                     </a>
                 </li>
-                <li class="nav-item">
+                <!-- <li class="nav-item">
                     <a href="<?=APP_URL?>/journal-entries" class="nav-link">
                         <i class="bi bi-circle"></i>
                         <span>Journal Entries</span>
                     </a>
-                </li>
+                </li> -->
             </ul>
         </li>
         <?php endif; ?>
@@ -168,7 +169,7 @@ if (!isset($user)) {
                         <span>Check Disbursement Report</span>
                     </a>
                 </li>
-                <li class="nav-item">
+              <!--   <li class="nav-item">
                     <a href="<?=APP_URL?>/trial-balance-report" class="nav-link">
                         <i class="bi bi-circle"></i>
                         <span>Trial Balance Report</span>
@@ -179,7 +180,7 @@ if (!isset($user)) {
                         <i class="bi bi-circle"></i>
                         <span>Income Statement Report</span>
                     </a>
-                </li>
+                </li> -->
                 
             </ul>
         </li>

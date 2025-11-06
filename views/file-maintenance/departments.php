@@ -60,9 +60,9 @@
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted">No departments found</td>
-                                    </tr>
+                                   <!--  <tr>
+                                        <td colspan="5" class="text-center text-muted">No departments found</td>
+                                    </tr> -->
                                 <?php endif; ?>
                             </tbody>
                         </table>

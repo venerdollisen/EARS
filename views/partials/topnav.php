@@ -6,8 +6,10 @@
         </button>
         
         <!-- Brand -->
-        <span class="navbar-brand d-none d-lg-block">
-            <?= APP_NAME ?>
+        <span class="navbar-brand  d-lg-block">
+            <!-- <?= APP_NAME ?> -->
+            <i class="bi bi-graph-up"></i>
+            EARS
         </span>
         
         <!-- Right Side -->

@@ -1,9 +1,9 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0">Subsidiary Accounts (Suppliers)</h1>
+            <h1 class="h3 mb-0">Subsidiary Accounts</h1>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal">
-                <i class="bi bi-plus-circle me-2"></i>Add Supplier
+                <i class="bi bi-plus-circle me-2"></i>Add Subsidiary Account
             </button>
         </div>
     </div>
@@ -13,14 +13,14 @@
     <div class="col-12">
         <div class="card shadow">
             <div class="card-header">
-                <h6 class="m-0 font-weight-bold text-primary">Supplier List</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Subsidiary Account List</h6>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover" id="suppliersTable">
                         <thead>
                             <tr>
-                                <th>Supplier Name</th>
+                                <th>Subsidiary Accounts Name</th>
                                 <th>Contact Info</th>
                                 <th>VAT Details</th>
                                 <th>Status</th>
@@ -89,7 +89,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Add Supplier</h5>
+                <h5 class="modal-title" id="modalTitle">Add Subsidiary Account</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -107,7 +107,7 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="supplier_name" class="form-label">Supplier Name *</label>
+                                        <label for="supplier_name" class="form-label">Subsidiary Account Name *</label>
                                         <input type="text" class="form-control" id="supplier_name" name="supplier_name" required>
                                     </div>
                                 </div>
@@ -181,7 +181,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveSupplier()">Save Supplier</button>
+                <button type="button" class="btn btn-primary" onclick="saveSupplier()">Save</button>
             </div>
         </div>
     </div>
@@ -217,7 +217,7 @@ function editSupplier(supplier) {
 }
 
 function deleteSupplier(supplierId) {
-    if (confirm('Are you sure you want to delete this supplier?')) {
+    if (confirm('Are you sure you want to delete this Subsidiary Account?')) {
         fetch(APP_URL + '/api/file-maintenance/delete', {
             method: 'POST',
             headers: {
@@ -236,12 +236,12 @@ function deleteSupplier(supplierId) {
                     location.reload();
                 }, 1000);
             } else {
-                showAlert(data.error || 'Failed to delete supplier', 'danger');
+                showAlert(data.error || 'Failed to delete Subsidiary Account', 'danger');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showAlert('Failed to delete supplier', 'danger');
+            showAlert('Failed to delete Subsidiary Account', 'danger');
         });
     }
 }
@@ -289,12 +289,12 @@ function saveSupplier() {
                 location.reload();
             }, 1000);
         } else {
-            showAlert(data.error || 'Failed to save supplier', 'danger');
+            showAlert(data.error || 'Failed to save Subsidiary Account', 'danger');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showAlert('Failed to save supplier', 'danger');
+        showAlert('Failed to save Subsidiary Account', 'danger');
     })
     .finally(() => {
         saveBtn.disabled = false;
@@ -333,7 +333,7 @@ function showAlert(message, type) {
 // Reset modal when closed
 $('#supplierModal').on('hidden.bs.modal', function() {
     document.getElementById('supplierForm').reset();
-    document.getElementById('modalTitle').textContent = 'Add Supplier';
+    document.getElementById('modalTitle').textContent = 'Add Subsidiary Account';
     document.getElementById('action').value = 'create';
     document.getElementById('supplier_id').value = '';
 });

@@ -277,16 +277,25 @@ class SummaryController extends Controller {
     }
 
     private function countHeaders(?string $type, string $dateFrom, string $dateTo): int {
-        $table = $this->getTableName($type);
-        if (!$table) return 0;
+        // $table = $this->getTableName($type);
+        // if (!$table) return 0;
 
-        $sql = "SELECT COUNT(*) AS cnt FROM {$table}
-                WHERE transaction_date BETWEEN ? AND ?";
-        $params = [$dateFrom, $dateTo];
-        if ($type) { $sql .= " AND transaction_type = ?"; $params[] = $type; }
+        // $sql = "SELECT COUNT(*) AS cnt FROM {$table}
+        //         WHERE transaction_date BETWEEN ? AND ?";
+        // $params = [$dateFrom, $dateTo];
+        // if ($type) { $sql .= " AND transaction_type = ?"; $params[] = $type; }
+        // $stmt = $this->db->prepare($sql);
+        // $stmt->execute($params);
+        // return (int)($stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0);
+
+        $sql = "SELECT 
+                    (SELECT COUNT(*) FROM cash_receipts WHERE transaction_date BETWEEN ? AND ?) +
+                    (SELECT COUNT(*) FROM cash_disbursements WHERE transaction_date BETWEEN ? AND ?) +
+                    (SELECT COUNT(*) FROM check_disbursements WHERE transaction_date BETWEEN ? AND ?) as total";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return (int)($stmt->fetch(PDO::FETCH_ASSOC)['cnt'] ?? 0);
+        $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo, $dateFrom, $dateTo]);
+        $transactions = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$transactions['total']??0;
     }
 
     private function statusCounts(string $type, string $dateFrom, string $dateTo): array {
