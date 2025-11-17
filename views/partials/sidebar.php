@@ -72,12 +72,12 @@ if (!isset($user)) {
                         <span>Subsidiary Account</span>
                     </a>
                 </li>
-                <li class="nav-item">
+                <!-- <li class="nav-item">
                     <a href="<?=APP_URL?>/file-maintenance/projects" class="nav-link">
                         <i class="bi bi-circle"></i>
                         <span>Projects</span>
                     </a>
-                </li>
+                </li> -->
                 <li class="nav-item">
                     <a href="<?=APP_URL?>/file-maintenance/departments" class="nav-link">
                         <i class="bi bi-circle"></i>

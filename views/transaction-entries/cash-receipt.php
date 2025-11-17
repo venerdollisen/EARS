@@ -110,7 +110,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="25%">Account Title</th>
-                                    <th width="15%">Project</th>
+                                    <!-- <th width="15%">Project</th> -->
                                     <th width="15%">Department</th>
                                     <th width="20%">Subsidiary Account</th>
                                     <th width="12%">Debit</th>
@@ -123,7 +123,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="4" class="text-end">
+                                    <td colspan="3" class="text-end">
                                         <strong>
                                             <span id="balanceLabel" class="text-danger">UNBALANCED</span>:
                                         </strong>
@@ -273,6 +273,17 @@ $(document).ready(function() {
 function addAccountRow() {
     accountRowCounter++;
     const rowId = 'account_row_' + accountRowCounter;
+
+    //  <td>
+    //             <select class="form-select project-select" name="accounts[${accountRowCounter}][project_id]">
+    //                 <option value="">Select Project</option>
+    //                 <?php foreach ($projects as $project): ?>
+    //                     <option value="<?= $project['id'] ?>">
+    //                         <?= htmlspecialchars((string)$project['project_code'] . ' - ' . (string)$project['project_name']) ?>
+    //                     </option>
+    //                 <?php endforeach; ?>
+    //             </select>
+    //         </td>
     
     const row = `
         <tr id="${rowId}">
@@ -287,16 +298,7 @@ function addAccountRow() {
                     <?php endforeach; ?>
                 </select>
             </td>
-            <td>
-                <select class="form-select project-select" name="accounts[${accountRowCounter}][project_id]">
-                    <option value="">Select Project</option>
-                    <?php foreach ($projects as $project): ?>
-                        <option value="<?= $project['id'] ?>">
-                            <?= htmlspecialchars((string)$project['project_code'] . ' - ' . (string)$project['project_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </td>
+           
             <td>
                 <select class="form-select department-select" name="accounts[${accountRowCounter}][department_id]">
                     <option value="">Select Department</option>
@@ -971,6 +973,18 @@ function displayTransactionDetails(transaction) {
                     </div>
                 </div>
             </div>
+            <div style="display: flex; justify-content: flex-start; gap: 40px; padding-top: 15px; margin-top: 60px;">
+    <div style="display: flex; flex-direction: column; align-items: flex-start; width: 300px;">
+      <div style="font-weight: bold; margin-bottom: 4px;">Received by:</div>
+      <div style="border-bottom: 1px solid #000; height: 40px; width: 100%;"></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: flex-start; width: 300px;">
+      <div style="font-weight: bold; margin-bottom: 4px;">Approved by:</div>
+      <div style="border-bottom: 1px solid #000; height: 40px; width: 100%;"></div>
+    </div>
+  </div>
+
         `;
         
         $('#transactionModalBody').html(modalContent);
