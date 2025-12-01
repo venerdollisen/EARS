@@ -74,10 +74,10 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="billing_number" class="form-label">Billing Number</label>
-                                <input type="text" class="form-control" id="billing_number" name="billing_number" 
-                                       placeholder="Enter billing number">
-                            </div>
+                            <label for="billing_number" class="form-label">Billing Number</label>
+                            <input type="text" class="form-control" id="billing_number" name="billing_number" 
+                                    placeholder="Enter billing number">
+                        </div>
                         </div>
                     </div>
                     
@@ -450,9 +450,9 @@ function checkBalance() {
     const difference = Math.abs(roundedDebit - roundedCredit);
     
     if (difference <= 0.001) {
-        EARS.showAlert('✅ Transaction is balanced!', 'success', '#globalAlertContainer');
+        EARS.showAlert('Transaction is balanced!', 'success', '#globalAlertContainer');
     } else {
-        EARS.showAlert('❌ Transaction is not balanced. Difference: ₱' + difference.toLocaleString('en-PH', {
+        EARS.showAlert('Transaction is not balanced. Difference: ₱' + difference.toLocaleString('en-PH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }), 'danger', '#globalAlertContainer');

@@ -670,3 +670,7 @@ LEFT JOIN journal_entry_details jed ON coa.id = jed.account_id
 WHERE coa.status = 'active'
 GROUP BY coa.id, coa.account_code, coa.account_name, cat.type_name;
 
+ALTER TABLE users
+ADD year_start DATE NOT NULL DEFAULT '2000-01-01',
+ADD year_end DATE NOT NULL DEFAULT '2000-12-31';
+
