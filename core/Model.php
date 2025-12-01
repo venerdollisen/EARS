@@ -105,11 +105,35 @@ class Model {
     }
     
     /**
-     * Get fiscal year start and end dates from accounting parameters
+     * Get fiscal year start and end dates from accounting parameters or current user's settings
      * @return array ['start' => 'YYYY-MM-DD', 'end' => 'YYYY-MM-DD']
      */
     protected function getFiscalYearDates() {
         try {
+            // If a logged-in user has per-user fiscal dates (year_start/year_end), prefer those.
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                session_start();
+            }
+
+            $userId = $_SESSION['user_id'] ?? null;
+            if ($userId) {
+                $sqlUser = "SELECT year_start, year_end FROM users WHERE id = :id LIMIT 1";
+                $stmtUser = $this->db->prepare($sqlUser);
+                $stmtUser->bindParam(':id', $userId, PDO::PARAM_INT);
+                $stmtUser->execute();
+                $userFy = $stmtUser->fetch(PDO::FETCH_ASSOC);
+
+                // Consider values valid when not empty and not equal to the default placeholders
+                if ($userFy && !empty($userFy['year_start']) && !empty($userFy['year_end'])
+                    && $userFy['year_start'] !== '2000-01-01' && $userFy['year_end'] !== '2000-12-31') {
+                    return [
+                        'start' => $userFy['year_start'],
+                        'end' => $userFy['year_end']
+                    ];
+                }
+            }
+
+            // Fallback: read from accounting_parameters table
             $sql = "SELECT 
                     MAX(CASE WHEN parameter_name = 'fiscal_year_start' THEN parameter_value END) AS fy_start,
                     MAX(CASE WHEN parameter_name = 'fiscal_year_end' THEN parameter_value END) AS fy_end
@@ -117,11 +141,11 @@ class Model {
             $stmt = $this->db->prepare($sql);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             // Default to current year if fiscal year not set
             $fyStart = $result['fy_start'] ?: date('Y-01-01');
             $fyEnd = $result['fy_end'] ?: date('Y-12-31');
-            
+
             return [
                 'start' => $fyStart,
                 'end' => $fyEnd
@@ -136,4 +160,4 @@ class Model {
         }
     }
 }
-?> 
+?>

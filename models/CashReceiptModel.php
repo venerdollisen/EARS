@@ -18,8 +18,8 @@ class CashReceiptModel extends Model {
             $sql = "INSERT INTO cash_receipts (
                 reference_no, transaction_date, total_amount, 
                 description, payment_form, check_number, bank, 
-                billing_number, payee_name, status, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                billing_number, collection_receipt, delivery_receipt, payee_name, status, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
@@ -31,6 +31,8 @@ class CashReceiptModel extends Model {
                 $headerData['check_number'] ?? null,
                 $headerData['bank'] ?? null,
                 $headerData['billing_number'] ?? null,
+                $headerData['collection_receipt'] ?? null,
+                $headerData['delivery_receipt'] ?? null,
                 $headerData['payee_name'] ?? null,
                 $headerData['status'] ?? 'pending',
                 $headerData['created_by']
@@ -160,6 +162,7 @@ class CashReceiptModel extends Model {
             
             $sql = "SELECT cr.id, cr.reference_no, cr.transaction_date, cr.total_amount,
                            cr.total_amount as amount, cr.description, cr.payment_form, cr.payee_name,
+                           cr.collection_receipt, cr.delivery_receipt,
                            cr.status, cr.created_at, u.full_name as created_by_name
                     FROM cash_receipts cr
                     LEFT JOIN users u ON cr.created_by = u.id
@@ -301,7 +304,7 @@ class CashReceiptModel extends Model {
             $sql = "UPDATE cash_receipts SET 
                     reference_no = ?, transaction_date = ?, total_amount = ?, 
                     description = ?, payment_form = ?, check_number = ?, bank = ?, 
-                    billing_number = ?, payee_name = ?, status = ?,
+                    billing_number = ?, collection_receipt = ?, delivery_receipt = ?, payee_name = ?, status = ?,
                     updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?";
             
@@ -315,6 +318,8 @@ class CashReceiptModel extends Model {
                 $data['check_number'] ?? null,
                 $data['bank'] ?? null,
                 $data['billing_number'] ?? null,
+                $data['collection_receipt'] ?? null,
+                $data['delivery_receipt'] ?? null,
                 $data['payee_name'] ?? null,
                 $data['status'] ?? 'posted',
                 $id
@@ -439,4 +444,4 @@ class CashReceiptModel extends Model {
             return false;
         }
     }
-} 
+}

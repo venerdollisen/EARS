@@ -21,6 +21,15 @@
             </thead>
             <tbody>
               <?php foreach ($users as $u): ?>
+                <?php 
+                  if($u['role']=='admin'){
+                    $u['role']='Finance Manager';
+                  } elseif($u['role']=='manager'){
+                    $u['role']='BIR';
+                  } else {
+                    $u['role']='Bookkeeper';
+                  }
+                ?>
                 <tr>
                   <td><?= htmlspecialchars($u['full_name'] ?? '-') ?></td>
                   <td><?= htmlspecialchars($u['username']) ?></td>
@@ -133,9 +142,9 @@ function deleteUser(id){
               <div class="mb-3">
                 <label class="form-label">Role</label>
                 <select class="form-select" name="role">
-                  <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
-                  <option value="user" selected>Assistant</option>
+                  <option value="admin">Finance Manager</option>
+                  <option value="manager">BIR</option>
+                  <option value="user" selected>Bookkeeper</option>
                 </select>
               </div>
             </div>

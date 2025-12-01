@@ -1,3 +1,4 @@
+<?php $isManager = isset($user['role']) && $user['role'] === 'manager'; ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
     <div class="container-fluid">
         <!-- Sidebar Toggle -->
@@ -15,6 +16,7 @@
         <!-- Right Side -->
         <ul class="navbar-nav ms-auto">
             <!-- Notifications -->
+             <?php if (!$isManager): ?>
             <li class="nav-item dropdown" id="notificationDropdown">
                 <a class="nav-link" href="#" role="button" data-bs-toggle="dropdown">
                     <i class="bi bi-bell"></i>
@@ -25,6 +27,7 @@
                      <li><div class="text-center text-muted small p-2" id="notifEmpty">No notifications</div></li>
                  </ul>
             </li>
+            <?php endif; ?>
             
             <!-- User Profile -->
             <li class="nav-item dropdown">

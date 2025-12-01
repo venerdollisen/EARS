@@ -1,19 +1,18 @@
 <?php $isStatusLocked = isset($user['role']) && in_array($user['role'], ['user','assistant']); ?>
-
-
+<?php $isManager = isset($user['role']) && $user['role'] === 'manager'; ?>
     <div class="row">
         <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">Check Disbursement Entry</h1>
-            <div>
+            <?php if (!$isManager): ?>
                 <button type="button" class="btn btn-success" onclick="saveTransaction()">
                     <i class="bi bi-save me-2"></i>Save Transaction
                 </button>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
-
+<?php if (!$isManager): ?>
 <div class="row">
     <div class="col-lg-12">
         <div class="card shadow">
@@ -119,7 +118,7 @@
                             <thead class="table-light">
                                             <tr>
                                     <th width="25%">Account Title</th>
-                                                <th width="15%">Project</th>
+                                                <!-- <th width="15%">Project</th> -->
                                                 <th width="15%">Department</th>
                                     <th width="20%">Subsidiary Account</th>
                                     <th width="12%">Debit</th>
@@ -130,7 +129,7 @@
                             <tbody id="accountTableBody"></tbody>
                                         <tfoot>
                                             <tr>
-                                    <td colspan="4" class="text-end">
+                                    <td colspan="3" class="text-end">
                                         <strong>
                                             <span id="balanceLabel" class="text-danger">UNBALANCED</span>:
                                         </strong>
@@ -155,6 +154,7 @@
                         </div>
 
 <!-- Details Modal -->
+ <?php endif; ?>
 <div class="modal fade" id="transactionModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
@@ -209,7 +209,9 @@ let currentRowIndex = 0;
 let chkTransactionsTable;
 
 $(document).ready(function(){
-    addAccountRow();
+    if("<?=!$isManager?>"){
+        addAccountRow();
+    }
     initializeChkTransactionsTable();
 });
 
@@ -362,6 +364,15 @@ function initializeChkTransactionsTable() {
 }
 
 function addAccountRow(){
+
+    //  <td>
+    //         <select class="form-select project-select" name="accounts[${currentRowIndex}][project_id]">
+    //                 <option value="">Select Project</option>
+    //                 <?php foreach ($projects as $project): ?>
+    //                 <option value="<?= $project['id'] ?>"><?= htmlspecialchars((string)$project['project_code'] . ' - ' . (string)$project['project_name']) ?></option>
+    //                 <?php endforeach; ?>
+    //             </select>
+    //         </td>
     const tbody = document.getElementById('accountTableBody');
     const row = document.createElement('tr');
     row.id = `accountRow_${currentRowIndex}`;
@@ -374,14 +385,7 @@ function addAccountRow(){
                     <?php endforeach; ?>
                 </select>
             </td>
-            <td>
-            <select class="form-select project-select" name="accounts[${currentRowIndex}][project_id]">
-                    <option value="">Select Project</option>
-                    <?php foreach ($projects as $project): ?>
-                    <option value="<?= $project['id'] ?>"><?= htmlspecialchars((string)$project['project_code'] . ' - ' . (string)$project['project_name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </td>
+           
             <td>
             <select class="form-select department-select" name="accounts[${currentRowIndex}][department_id]">
                     <option value="">Select Department</option>

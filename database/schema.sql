@@ -317,6 +317,8 @@ CREATE TABLE IF NOT EXISTS cash_receipts (
     bank VARCHAR(100),
     payee_name VARCHAR(255),
     billing_number VARCHAR(50),
+    collection_receipt VARCHAR(50),
+    delivery_receipt VARCHAR(50),
     return_reason TEXT,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     created_by INT NOT NULL,

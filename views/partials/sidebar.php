@@ -39,7 +39,7 @@ if (!isset($user)) {
         </li>
         <?php endif; ?>
 
-        <?php if (hasPermission($user, 'file_maintenance')): ?>
+        <?php if (hasPermission($user, 'file_maintenance') && !isManager($user)): ?>
         <li class="nav-item">
             <a href="#fileMaintenanceSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/file-maintenance') !== false ? 'active' : '' ?>">
                 <i class="bi bi-folder"></i>
@@ -124,7 +124,7 @@ if (!isset($user)) {
         </li>
         <?php endif; ?>
 
-        <?php if (hasPermission($user, 'user_management')): ?>
+        <?php if (hasPermission($user, 'user_management') && !isManager($user)): ?>
         <li class="nav-item">
             <a href="<?=APP_URL?>/users" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/users') !== false ? 'active' : '' ?>">
                 <i class="bi bi-people"></i>
@@ -186,7 +186,7 @@ if (!isset($user)) {
         </li>
         <?php endif; ?>
 
-        <?php if (hasPermission($user, 'audit_trail')): ?>
+        <?php if (hasPermission($user, 'audit_trail') && !isManager($user)): ?>
         <li class="nav-item">
             <a href="<?=APP_URL?>/audit-trail" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/audit-trail') !== false ? 'active' : '' ?>">
                 <i class="bi bi-shield-check"></i>
@@ -237,4 +237,4 @@ if (!isset($user)) {
             </ul>
         </li>
     </ul>
-</nav> 
+</nav>

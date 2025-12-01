@@ -1,5 +1,6 @@
 <?php
 require_once BASE_PATH . '/models/AccountingParametersModel.php';
+require_once BASE_PATH . '/models/UserModel.php';
 
 class ParametersController extends Controller {
     
@@ -64,6 +65,40 @@ class ParametersController extends Controller {
             $result = $parametersModel->saveParametersByName($parametersToUpdate);
             
             if ($result) {
+                // Ensure session active
+                if (session_status() !== PHP_SESSION_ACTIVE) {
+                    session_start();
+                }
+
+                // Read back saved fiscal dates (use defaults if missing)
+                $fyStart = $parametersModel->getParameterValue('fiscal_year_start', date('Y-01-01'));
+                $fyEnd = $parametersModel->getParameterValue('fiscal_year_end', date('Y-12-31'));
+
+                // Save into PHP session for immediate use
+                $_SESSION['fiscal_year_start'] = $fyStart;
+                $_SESSION['fiscal_year_end'] = $fyEnd;
+
+                // Persist fiscal dates into current user's DB record (year_start/year_end)
+                try {
+                    $userModel = new UserModel();
+                    $currentUser = $this->auth->getCurrentUser();
+                    if ($currentUser && isset($currentUser['id'])) {
+                        // Map parameter names to users table column names
+                        $userUpdate = [
+                            'year_start' => $fyStart,
+                            'year_end' => $fyEnd
+                        ];
+                        $userModel->updateUser($currentUser['id'], $userUpdate);
+
+                        // Also reflect in session (so UI can read them)
+                        $_SESSION['year_start'] = $fyStart;
+                        $_SESSION['year_end'] = $fyEnd;
+                    }
+                } catch (Exception $e) {
+                    // Log but do not fail the overall parameters update
+                    error_log('Failed to persist fiscal dates to user record: ' . $e->getMessage());
+                }
+
                 $this->jsonResponse(['success' => true, 'message' => 'Parameters updated successfully']);
             } else {
                 $this->jsonResponse(['error' => 'Failed to update parameters'], 500);
@@ -74,4 +109,4 @@ class ParametersController extends Controller {
         }
     }
 }
-?> 
+?>

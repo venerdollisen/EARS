@@ -1,19 +1,21 @@
 <?php $isStatusLocked = isset($user['role']) && in_array($user['role'], ['user','assistant']); ?>
+<?php $isManager = isset($user['role']) && $user['role'] === 'manager'; ?>
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">Cash Disbursement Entry</h1>
-            <div>
+            <?php if (!$isManager): ?>
                 <button type="button" class="btn btn-success" onclick="saveTransaction()">
                     <i class="bi bi-save me-2"></i>Save Transaction
                 </button>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
 
 </div>
 
 <!-- Recent Transactions section intentionally moved below the form -->
+<?php if (!$isManager): ?>
 
 <div class="row">
     <!-- Transaction Form -->
@@ -134,7 +136,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th width="25%">Account Title</th>
-                                    <th width="15%">Project</th>
+                                    <!-- <th width="15%">Project</th> -->
                                     <th width="15%">Department</th>
                                     <th width="20%">Subsidiary Account</th>
                                     <th width="12%">Debit</th>
@@ -147,7 +149,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="4" class="text-end">
+                                    <td colspan="3" class="text-end">
                                         <strong>
                                             <span id="balanceLabel" class="text-danger">UNBALANCED</span>:
                                         </strong>
@@ -170,6 +172,7 @@
         </div>
     </div>
 </div>
+<?php endif; ?>
 <div>
         <!-- Recent Transactions -->
         <div class="row mt-4">
@@ -292,7 +295,10 @@ let selectedAccountData = null;
 
 // Initialize the page
 $(document).ready(function() {
-    addAccountRow();
+    if("<?=!$isManager?>"){
+        addAccountRow();
+    }
+    // addAccountRow();
 
     // Initialize table first, then load data to avoid race conditions
     const table = $('#cdTransactionsTable');
@@ -309,6 +315,17 @@ $(document).ready(function() {
 });
 
 function addAccountRow() {
+
+    // <td>
+    //         <select class="form-select project-select" name="accounts[${currentRowIndex}][project_id]">
+    //             <option value="">Select Project</option>
+    //             <?php foreach ($projects as $project): ?>
+    //                 <option value="<?= $project['id'] ?>">
+    //                     <?= htmlspecialchars((string)$project['project_code'] . ' - ' . (string)$project['project_name']) ?>
+    //                 </option>
+    //             <?php endforeach; ?>
+    //         </select>
+    //     </td>
     const tbody = document.getElementById('accountTableBody');
     const row = document.createElement('tr');
     row.id = `accountRow_${currentRowIndex}`;
@@ -324,16 +341,7 @@ function addAccountRow() {
                 <?php endforeach; ?>
             </select>
         </td>
-        <td>
-            <select class="form-select project-select" name="accounts[${currentRowIndex}][project_id]">
-                <option value="">Select Project</option>
-                <?php foreach ($projects as $project): ?>
-                    <option value="<?= $project['id'] ?>">
-                        <?= htmlspecialchars((string)$project['project_code'] . ' - ' . (string)$project['project_name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </td>
+        
         <td>
             <select class="form-select department-select" name="accounts[${currentRowIndex}][department_id]">
                 <option value="">Select Department</option>
@@ -765,8 +773,6 @@ function loadRecentTransactions() {
                     }
                 }
                 
-                console.log('Recent disbursements loaded:', items.length);
-                
                 // Delegate click for dynamically added View buttons
                 $('#cdTransactionsTable tbody').off('click', '.cd-view-transaction-btn').on('click', '.cd-view-transaction-btn', function() {
                     const transactionId = $(this).data('transaction-id');
@@ -783,34 +789,12 @@ function loadRecentTransactions() {
 let cdTransactionsTable;
 
 function initializeCDTransactionsTable() {
-    console.log('Initializing server-side DataTable for cash disbursement...'); // Debug log
-    
-    // Check if DataTable is available
-    if (typeof $.fn.DataTable === 'undefined') {
-        console.error('DataTable library not loaded!');
-        return;
-    }
-    
+   
     // Check if table exists
     const table = $('#cdTransactionsTable');
-    if (table.length === 0) {
-        console.log('Table not found'); // Debug log
-        return;
-    }
-
-    // If DataTable is already initialized, destroy it to avoid duplicates
-    if ($.fn.DataTable.isDataTable('#cdTransactionsTable')) {
-        try {
-            $('#cdTransactionsTable').DataTable().destroy();
-            console.log('Destroyed existing DataTable'); // Debug log
-        } catch (error) {
-            console.log('Error destroying DataTable:', error); // Debug log
-        }
-    }
     
     // Initialize server-side DataTable
     try {
-        console.log('Initializing DataTable with server-side processing...');
         cdTransactionsTable = $('#cdTransactionsTable').DataTable({
             processing: true,
             serverSide: true,
@@ -820,11 +804,11 @@ function initializeCDTransactionsTable() {
                 data: function(d) {
                     // Add user role to the request
                     d.userRole = '<?= $user['role'] ?? 'user' ?>';
-                    console.log('DataTable request data:', d);
+
                     return d;
                 },
                 dataSrc: function(json) {
-                    console.log('DataTable response:', json);
+
                     if (json.data) {
                         return json.data;
                     }
@@ -856,7 +840,7 @@ function initializeCDTransactionsTable() {
                 attachCDTransactionEventHandlers();
             }
         });
-        console.log('Server-side DataTable initialized successfully'); // Debug log
+
     } catch (error) {
         console.error('Error initializing DataTable:', error);
         // Fallback: ensure table is visible even without DataTable

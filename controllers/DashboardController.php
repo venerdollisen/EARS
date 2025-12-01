@@ -34,6 +34,9 @@ class DashboardController extends Controller {
         
         try {
             [$dateFrom, $dateTo] = $this->resolveDateRange();
+
+            // Log the resolved date range for debugging
+            error_log("Dashboard date range resolved: {$dateFrom} to {$dateTo}");
             
             // Get total receipts from cash_receipts table
             $sql = "SELECT COALESCE(SUM(total_amount), 0) as total FROM cash_receipts WHERE transaction_date BETWEEN ? AND ?";
@@ -70,7 +73,10 @@ class DashboardController extends Controller {
                 'total_receipts' => $totalReceipts,
                 'cash_disbursements' => $totalCashDisb,
                 'check_disbursements' => $totalCheckDisb,
-                'total_transactions' => $transactions['total'] ?? 0
+                'total_transactions' => $transactions['total'] ?? 0,
+                // include date range for debugging
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo
             ];
             
         } catch (Exception $e) {
@@ -78,7 +84,9 @@ class DashboardController extends Controller {
                 'total_receipts' => 0,
                 'cash_disbursements' => 0,
                 'check_disbursements' => 0,
-                'total_transactions' => 0
+                'total_transactions' => 0,
+                'date_from' => null,
+                'date_to' => null
             ];
         }
     }
@@ -248,14 +256,53 @@ class DashboardController extends Controller {
         $dateFrom = $_GET['date_from'] ?? null;
         $dateTo = $_GET['date_to'] ?? null;
         if (!$dateFrom || !$dateTo) {
-            // Default to fiscal year if set; otherwise current year
-            $fy = $this->db->query("SELECT 
-                    MAX(CASE WHEN parameter_name='fiscal_year_start' THEN parameter_value END) AS fy_start,
-                    MAX(CASE WHEN parameter_name='fiscal_year_end' THEN parameter_value END) AS fy_end
-                FROM accounting_parameters")->fetch(PDO::FETCH_ASSOC);
-            $dateFrom = $fy['fy_start'] ?: date('Y-01-01');
-            $dateTo = $fy['fy_end'] ?: date('Y-12-31');
+            // Prefer per-user fiscal dates (session or users table), otherwise fallback to accounting parameters
+            try {
+                if (session_status() !== PHP_SESSION_ACTIVE) {
+                    session_start();
+                }
+
+                // Use session values if available and not default placeholders
+                $sesStart = $_SESSION['year_start'] ?? null;
+                $sesEnd = $_SESSION['year_end'] ?? null;
+                if ($sesStart && $sesEnd && $sesStart !== '2000-01-01' && $sesEnd !== '2000-12-31') {
+                    $dateFrom = $sesStart;
+                    $dateTo = $sesEnd;
+                } else {
+                    // Try current logged-in user's DB values
+                    $currentUser = $this->auth->getCurrentUser();
+                    if ($currentUser && isset($currentUser['id'])) {
+                        $stmt = $this->db->prepare("SELECT year_start, year_end FROM users WHERE id = :id LIMIT 1");
+                        $stmt->bindParam(':id', $currentUser['id'], PDO::PARAM_INT);
+                        $stmt->execute();
+                        $userFy = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if ($userFy && !empty($userFy['year_start']) && !empty($userFy['year_end'])
+                            && $userFy['year_start'] !== '2000-01-01' && $userFy['year_end'] !== '2000-12-31') {
+                            $dateFrom = $userFy['year_start'];
+                            $dateTo = $userFy['year_end'];
+
+                            // store to session for quicker access
+                            $_SESSION['year_start'] = $dateFrom;
+                            $_SESSION['year_end'] = $dateTo;
+                        }
+                    }
+                }
+
+                // Still not set? fallback to accounting_parameters
+                if (!$dateFrom || !$dateTo) {
+                    $fy = $this->db->query("SELECT 
+                            MAX(CASE WHEN parameter_name='fiscal_year_start' THEN parameter_value END) AS fy_start,
+                            MAX(CASE WHEN parameter_name='fiscal_year_end' THEN parameter_value END) AS fy_end
+                        FROM accounting_parameters")->fetch(PDO::FETCH_ASSOC);
+                    $dateFrom = $fy['fy_start'] ?: date('Y-01-01');
+                    $dateTo = $fy['fy_end'] ?: date('Y-12-31');
+                }
+            } catch (Exception $e) {
+                // On error, default to current calendar year
+                $dateFrom = date('Y-01-01');
+                $dateTo = date('Y-12-31');
+            }
         }
         return [$dateFrom, $dateTo];
     }
-} 
+}

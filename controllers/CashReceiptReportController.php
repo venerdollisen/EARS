@@ -50,18 +50,64 @@ class CashReceiptReportController extends Controller {
         header('Cache-Control: no-cache, must-revalidate');
         
         try {
+            // Accept both form-encoded POST and JSON bodies
+            $input = [];
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+            if (stripos($contentType, 'application/json') !== false) {
+                $input = json_decode(file_get_contents('php://input'), true) ?: [];
+            } else {
+                $input = $_POST ?? [];
+                if (empty($input)) {
+                    $raw = file_get_contents('php://input');
+                    $json = @json_decode($raw, true);
+                    if (is_array($json)) {
+                        $input = $json;
+                    }
+                }
+            }
+
+            // Trim and normalize incoming filter values
             $filters = [
-                'start_date' => $_POST['start_date'] ?? '',
-                'end_date' => $_POST['end_date'] ?? '',
-                'account_id' => $_POST['account_id'] ?? '',
-                'supplier_id' => $_POST['supplier_id'] ?? '',
-                'project_id' => $_POST['project_id'] ?? '',
-                'department_id' => $_POST['department_id'] ?? '',
-                'payment_form' => $_POST['payment_form'] ?? '',
-                'status' => $_POST['status'] ?? ''
+                'start_date' => isset($input['start_date']) ? trim($input['start_date']) : '',
+                'end_date' => isset($input['end_date']) ? trim($input['end_date']) : '',
+                'account_id' => isset($input['account_id']) ? trim($input['account_id']) : '',
+                'supplier_id' => isset($input['supplier_id']) ? trim($input['supplier_id']) : '',
+                'project_id' => isset($input['project_id']) ? trim($input['project_id']) : '',
+                'department_id' => isset($input['department_id']) ? trim($input['department_id']) : '',
+                'payment_form' => isset($input['payment_form']) ? trim($input['payment_form']) : '',
+                'status' => isset($input['status']) ? trim($input['status']) : ''
             ];
-            
-            
+
+            // If no dates provided, default to fiscal year boundaries from the model
+            if (empty($filters['start_date']) && empty($filters['end_date'])) {
+                try {
+                    $fy = $this->reportModel->getFiscalYearDates();
+                    if (!empty($fy['start_date']) && !empty($fy['end_date'])) {
+                        $filters['start_date'] = $fy['start_date'];
+                        $filters['end_date'] = $fy['end_date'];
+                    }
+                } catch (Exception $e) {
+                    // ignore and continue with no dates
+                }
+            }
+
+            // Validate dates format (YYYY-MM-DD) and ensure start <= end
+            if (!empty($filters['start_date']) && !$this->isValidDate($filters['start_date'])) {
+                throw new Exception('Invalid start date format');
+            }
+            if (!empty($filters['end_date']) && !$this->isValidDate($filters['end_date'])) {
+                throw new Exception('Invalid end date format');
+            }
+
+            if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+                if (strtotime($filters['start_date']) > strtotime($filters['end_date'])) {
+                    // swap to correct order
+                    $tmp = $filters['start_date'];
+                    $filters['start_date'] = $filters['end_date'];
+                    $filters['end_date'] = $tmp;
+                }
+            }
+
             $data = $this->reportModel->generateReport($filters);
             $summary = $this->reportModel->getSummaryStats($filters);
             $byPaymentForm = $this->reportModel->getDataByPaymentForm($filters);

@@ -1,17 +1,18 @@
 <?php $isStatusLocked = isset($user['role']) && in_array($user['role'], ['user','assistant']); ?>
+<?php $isManager = isset($user['role']) && $user['role'] === 'manager'; ?>
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">Cash Receipt Entry</h1>
-            <div>
+            <?php if (!$isManager): ?>
                 <button type="button" class="btn btn-success" onclick="saveTransaction()">
                     <i class="bi bi-save me-2"></i>Save Transaction
                 </button>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
-
+<?php if (!$isManager): ?>
 <div class="row">
     <!-- Transaction Form -->
     <div class="col-lg-12">
@@ -82,6 +83,23 @@
                     </div>
                     
                     <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="collection_receipt" class="form-label">Collection Receipt</label>
+                                <input type="text" class="form-control" id="collection_receipt" name="collection_receipt"
+                                       placeholder="Enter collection receipt number (if any)">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="delivery_receipt" class="form-label">Delivery Receipt</label>
+                                <input type="text" class="form-control" id="delivery_receipt" name="delivery_receipt"
+                                       placeholder="Enter delivery receipt number (if any)">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-md-8">
                             <div class="mb-3">
                                 <label for="payment_for" class="form-label">Payment Description *</label>
@@ -147,7 +165,7 @@
     </div>
     
 </div>
-
+<?php endif; ?>
 <!-- Recent Transactions -->
 <div class="row mt-4">
     <div class="col-12">
@@ -255,7 +273,9 @@ $(document).ready(function() {
     });
     
     // Add initial account row
-    addAccountRow();
+    if("<?=!$isManager?>"){
+        addAccountRow();
+    }
     
     // Initialize filters
     initializeFilters();
@@ -501,6 +521,8 @@ function saveTransaction() {
         check_number: $('#check_number').val(),
         bank: $('#bank').val(),
         billing_number: $('#billing_number').val(),
+        collection_receipt: $('#collection_receipt').val(),
+        delivery_receipt: $('#delivery_receipt').val(),
                     status: $('#status').val(),
         account_distribution: []
     };
@@ -616,30 +638,9 @@ $('#reference_no').on('focus', function() {
 let transactionsTable;
 
 function initializeTransactionsTable() {
-    console.log('Initializing server-side DataTable...'); // Debug log
-    
-    // Check if DataTable is available
-    if (typeof $.fn.DataTable === 'undefined') {
-        console.error('DataTable library not loaded!');
-        return;
-    }
     
     // Check if table exists
     const table = $('#transactionsTable');
-    if (table.length === 0) {
-        console.log('Table not found'); // Debug log
-        return;
-    }
-
-    // If DataTable is already initialized, destroy it to avoid duplicates
-    if ($.fn.DataTable.isDataTable('#transactionsTable')) {
-        try {
-            $('#transactionsTable').DataTable().destroy();
-            console.log('Destroyed existing DataTable'); // Debug log
-        } catch (error) {
-            console.log('Error destroying DataTable:', error); // Debug log
-        }
-    }
     
     // Initialize server-side DataTable
     try {
@@ -651,11 +652,9 @@ function initializeTransactionsTable() {
                 type: 'GET',
                 data: function(d) {
                     // Add any additional parameters if needed
-                    console.log('DataTable request data:', d);
                     return d;
                 },
                 dataSrc: function(json) {
-                    console.log('DataTable response:', json);
                     if (json.success && json.data) {
                         // Transform the data to match DataTable format
                         return json.data.map(function(item) {
@@ -756,7 +755,6 @@ function initializeTransactionsTable() {
                 });
             }
         });
-        console.log('Server-side DataTable initialized successfully'); // Debug log
     } catch (error) {
         console.error('Error initializing DataTable:', error);
         // Fallback: ensure table is visible even without DataTable
@@ -1297,4 +1295,4 @@ $(document).ready(function() {
         `)
         .appendTo('head');
 });
-</script> 
+</script>

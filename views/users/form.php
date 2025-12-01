@@ -42,9 +42,9 @@ $rec = $record ?? [
               <div class="mb-3">
                 <label class="form-label">Role</label>
                 <select class="form-select" name="role">
-                  <option value="admin" <?= ($rec['role']==='admin'?'selected':'') ?>>Admin</option>
-                  <option value="manager" <?= ($rec['role']==='manager'?'selected':'') ?>>Manager</option>
-                  <option value="user" <?= ($rec['role']==='user'?'selected':'') ?>>Assistant</option>
+                  <option value="admin" <?= ($rec['role']==='admin'?'selected':'') ?>>Finance Manager</option>
+                  <option value="manager" <?= ($rec['role']==='manager'?'selected':'') ?>>BIR</option>
+                  <option value="user" <?= ($rec['role']==='user'?'selected':'') ?>>Bookkeper</option>
                 </select>
               </div>
             </div>

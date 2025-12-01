@@ -155,14 +155,14 @@ class CashReceiptController extends Controller {
             }
             
             // Show warnings if any (but allow transaction to proceed)
-            if (!empty($validationResult['warnings'])) {
-                echo json_encode([
-                    'success' => false,
-                    'warning' => 'Transaction has warnings but is valid',
-                    'message' => 'Please review the warnings: ' . implode(', ', $validationResult['warnings'])
-                ]);
-                return;
-            }
+            // if (!empty($validationResult['warnings'])) {
+            //     echo json_encode([
+            //         'success' => false,
+            //         'warning' => 'Transaction has warnings but is valid',
+            //         'message' => 'Please review the warnings: ' . implode(', ', $validationResult['warnings'])
+            //     ]);
+            //     return;
+            // }
             
             // Enforce default status for assistants/users
             try {
@@ -186,6 +186,8 @@ class CashReceiptController extends Controller {
                 'check_number' => $data['check_number'] ?? null,
                 'bank' => $data['bank'] ?? null,
                 'billing_number' => $data['billing_number'] ?? null,
+                'collection_receipt' => $data['collection_receipt'] ?? null,
+                'delivery_receipt' => $data['delivery_receipt'] ?? null,
                 'payee_name' => null, // Cash receipts don't have payee
                 'status' => $data['status'] ?? 'pending',
                 'created_by' => $this->auth->getCurrentUser()['id']
@@ -560,4 +562,4 @@ class CashReceiptController extends Controller {
             ]);
         }
     }
-} 
+}
