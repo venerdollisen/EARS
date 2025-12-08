@@ -40,7 +40,7 @@ class Controller {
 
     protected function isStandalonePage($view) {
         // Pages that should not use the main layout
-        $standalonePages = ['auth/login'];
+        $standalonePages = ['auth/login', 'auth/forgot_password', 'auth/reset_password'];
         return in_array($view, $standalonePages);
     }
 
@@ -89,4 +89,4 @@ class Controller {
         return json_decode($input, true) ?: $_POST;
     }
 }
-?> 
+?>

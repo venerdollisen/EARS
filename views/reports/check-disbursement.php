@@ -55,17 +55,6 @@
                                         <div class="row mt-3">
                                             <div class="col-md-3">
                                                 <div class="form-group">
-                                                    <label for="project_id">Project</label>
-                                                    <select class="form-control" id="project_id" name="project_id">
-                                                        <option value="">All Projects</option>
-                                                        <?php foreach ($projects as $project): ?>
-                                                            <option value="<?= $project['id'] ?>"><?= $project['project_name'] ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="form-group">
                                                     <label for="department_id">Department</label>
                                                     <select class="form-control" id="department_id" name="department_id">
                                                         <option value="">All Departments</option>
@@ -191,8 +180,6 @@ function generateReport() {
     $('#summaryCards').hide();
     $('#chartsSection').hide();
 
-    console.log('Sending request to:', APP_URL + '/api/check-disbursement-report/generate');
-
     $.ajax({
         url: APP_URL + '/api/check-disbursement-report/generate',
         method: 'POST',
@@ -201,9 +188,7 @@ function generateReport() {
         contentType: false,
         success: function(response) {
             $('#loadingSpinner').hide();
-            console.log('Success callback triggered');
-            console.log('Response type:', typeof response);
-            console.log('Raw response:', response);
+      
             
             // Parse JSON response
             let parsedResponse;
@@ -213,15 +198,12 @@ function generateReport() {
                 } else {
                     parsedResponse = response;
                 }
-                console.log('Parsed response:', parsedResponse);
+               
             } catch (e) {
                 console.error('Error parsing response:', e);
                 showAlert('error', 'Invalid response format');
                 return;
             }
-            
-            console.log('parsedResponse.success:', parsedResponse.success);
-            console.log('parsedResponse.success === true:', parsedResponse.success === true);
             
             if (parsedResponse && parsedResponse.success === true) {
                 console.log('Calling displayReportData');
@@ -233,25 +215,18 @@ function generateReport() {
         },
         error: function(xhr, status, error) {
             $('#loadingSpinner').hide();
-            console.error('Error callback triggered');
-            console.error('AJAX Error:', xhr.responseText);
-            console.error('Status:', status);
-            console.error('Error:', error);
-            console.error('Response headers:', xhr.getAllResponseHeaders());
+
             showAlert('error', 'Error generating report: ' + error);
         }
     });
 }
 
 function displayReportData(response) {
-    console.log('Displaying report data:', response);
     
     if (response.data && response.data.length > 0) {
-        console.log('Found', response.data.length, 'records');
         
         // Display summary cards
         if (response.summary) {
-            console.log('Summary:', response.summary);
             $('#totalTransactions').text(response.summary.total_transactions || 0);
             $('#totalAmount').text(parseFloat(response.summary.total_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
             $('#averageAmount').text(parseFloat(response.summary.average_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}));
@@ -427,50 +402,4 @@ function showAlert(type, message) {
     $('.card-body').first().prepend(alertHtml);
 }
 
-function testReport() {
-    console.log('=== TEST REPORT FUNCTION CALLED ===');
-    console.log('Testing report generation...');
-    
-    // Check if form exists
-    const form = $('#reportForm');
-    if (form.length === 0) {
-        console.error('Form not found!');
-        alert('Error: Report form not found!');
-        return;
-    }
-    
-    console.log('Form found, getting form data...');
-    
-    // Check current form values
-    const formData = new FormData(form[0]);
-    console.log('Form data entries:');
-    for (let [key, value] of formData.entries()) {
-        console.log(key + ':', value);
-    }
-    
-    // Test individual form fields
-    console.log('Individual field values:');
-    console.log('Start Date:', $('#start_date').val());
-    console.log('End Date:', $('#end_date').val());
-    console.log('Account ID:', $('#account_id').val());
-    console.log('Supplier ID:', $('#supplier_id').val());
-    console.log('Project ID:', $('#project_id').val());
-    console.log('Department ID:', $('#department_id').val());
-    console.log('Payment Form:', $('#payment_form').val());
-    console.log('Status:', $('#status').val());
-    
-    // Test API URL
-    const apiUrl = APP_URL + '/api/check-disbursement-report/generate';
-    console.log('API URL would be:', apiUrl);
-    
-    // Show success message
-    showAlert('success', 'Test completed! Check browser console for details.');
-    console.log('=== TEST REPORT FUNCTION COMPLETED ===');
-}
-
-// Global test function for debugging
-window.testCheckDisbursementReport = function() {
-    console.log('Global test function called');
-    testReport();
-};
 </script>

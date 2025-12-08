@@ -5,6 +5,7 @@ require_once BASE_PATH . '/models/ChartOfAccountsModel.php';
 require_once BASE_PATH . '/models/SupplierModel.php';
 require_once BASE_PATH . '/models/ProjectModel.php';
 require_once BASE_PATH . '/models/DepartmentModel.php';
+require_once 'config/tcpdf_config.php';
 
 class FileMaintenanceController extends Controller {
     
@@ -78,6 +79,113 @@ class FileMaintenanceController extends Controller {
             'accounts' => $accounts,
             'user' => $this->auth->getCurrentUser()
         ]);
+    }
+
+    // New: Export subsidiary accounts list to PDF using TCPDF
+    public function exportSubsidiaryPdf() {
+        $this->requireAuth();
+        $this->requirePermission('file_maintenance');
+
+        // Clear any output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        try {
+            $supplierModel = new SupplierModel();
+            $suppliers = $supplierModel->getAllSuppliers();
+
+            if (empty($suppliers)) {
+                throw new Exception('No subsidiary accounts found to export.');
+            }
+
+            // Create PDF in landscape to provide more horizontal space
+            $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+            $pdf->SetCreator('EARS System');
+            $pdf->SetAuthor('EARS System');
+            $pdf->SetTitle('Subsidiary Accounts');
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+            $pdf->SetMargins(15, 15, 15);
+            $pdf->SetAutoPageBreak(true, 15);
+            $pdf->AddPage();
+
+            // Title
+            $pdf->SetFont('helvetica', 'B', 14);
+            $pdf->Cell(0, 10, 'SUBSIDIARY ACCOUNTS', 0, 1, 'C');
+            $pdf->Ln(4);
+
+            // Prepare table column widths to exactly fill printable width
+            $pageWidth = $pdf->getPageWidth();
+            $margins = $pdf->getMargins();
+            $printable = $pageWidth - $margins['left'] - $margins['right'];
+            // Distribute widths (sum must equal $printable)
+            $wName = 80; // name column
+            $wContact = 60;
+            $wPhone = 40;
+            $wEmail = 70;
+            $wStatus = $printable - ($wName + $wContact + $wPhone + $wEmail);
+            if ($wStatus < 15) { $wStatus = 15; }
+
+            // Header
+            $pdf->SetFont('helvetica', 'B', 10);
+            $pdf->SetFillColor(230, 230, 230);
+            $pdf->MultiCell($wName, 8, 'Name', 1, 'L', true, 0);
+            $pdf->MultiCell($wContact, 8, 'Contact Person', 1, 'L', true, 0);
+            $pdf->MultiCell($wPhone, 8, 'Phone', 1, 'L', true, 0);
+            $pdf->MultiCell($wEmail, 8, 'Email', 1, 'L', true, 0);
+            $pdf->MultiCell($wStatus, 8, 'Status', 1, 'L', true, 1);
+
+            $pdf->SetFont('helvetica', '', 9);
+            $lineHeight = 6; // height per text line
+
+            foreach ($suppliers as $s) {
+                $name = trim($s['supplier_name'] ?? '');
+                $contact = trim($s['contact_person'] ?? '');
+                $phone = trim($s['phone'] ?? '');
+                $email = trim($s['email'] ?? '');
+                $status = isset($s['status']) ? ucfirst($s['status']) : '';
+
+                // Calculate number of lines for each cell given the column width
+                $nbName = max(1, $pdf->getNumLines($name, $wName));
+                $nbContact = max(1, $pdf->getNumLines($contact, $wContact));
+                $nbPhone = max(1, $pdf->getNumLines($phone, $wPhone));
+                $nbEmail = max(1, $pdf->getNumLines($email, $wEmail));
+                $nbStatus = max(1, $pdf->getNumLines($status, $wStatus));
+
+                $maxLines = max($nbName, $nbContact, $nbPhone, $nbEmail, $nbStatus);
+                $cellHeight = $maxLines * $lineHeight;
+
+                // Ensure page break if needed
+                if ($pdf->GetY() + $cellHeight + 15 > $pdf->getPageHeight()) {
+                    $pdf->AddPage();
+                }
+
+                // Output cells using MultiCell to allow wrapping and consistent height
+                $pdf->MultiCell($wName, $cellHeight, $name, 1, 'L', 0, 0, '', '', true, 0, false, true, $cellHeight, 'M');
+                $pdf->MultiCell($wContact, $cellHeight, $contact, 1, 'L', 0, 0, '', '', true, 0, false, true, $cellHeight, 'M');
+                $pdf->MultiCell($wPhone, $cellHeight, $phone, 1, 'L', 0, 0, '', '', true, 0, false, true, $cellHeight, 'M');
+                $pdf->MultiCell($wEmail, $cellHeight, $email, 1, 'L', 0, 0, '', '', true, 0, false, true, $cellHeight, 'M');
+                $pdf->MultiCell($wStatus, $cellHeight, $status, 1, 'L', 0, 1, '', '', true, 0, false, true, $cellHeight, 'M');
+            }
+
+            // Display inline in browser (fit to viewer)
+            if (!headers_sent()) {
+                header('Content-Type: application/pdf');
+                header('Cache-Control: no-cache, must-revalidate');
+                header('Pragma: no-cache');
+            }
+
+            $pdf->Output('subsidiary_accounts_' . date('Y-m-d_H-i-s') . '.pdf', 'I');
+            exit;
+
+        } catch (Exception $e) {
+            if (!headers_sent()) {
+                header('Content-Type: text/plain');
+            }
+            echo 'Error generating PDF: ' . $e->getMessage();
+            exit;
+        }
     }
     
     public function projects() {
@@ -405,4 +513,4 @@ class FileMaintenanceController extends Controller {
         }
     }
 }
-?> 
+?>

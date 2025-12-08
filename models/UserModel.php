@@ -91,5 +91,68 @@ class UserModel extends Model {
         // Soft delete - set status to inactive
         return $this->update($id, ['status' => 'inactive', 'updated_at' => date('Y-m-d H:i:s')]);
     }
+    
+    public function getUserByEmail($email) {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE email = ? LIMIT 1");
+        $stmt->execute([$email]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Create password reset token and return token and user
+     */
+    public function createPasswordReset($email) {
+        $user = $this->getUserByEmail($email);
+        if (!$user) return false;
+
+        // Create password_resets table if not exists (safe-guard)
+        $this->db->exec("CREATE TABLE IF NOT EXISTS password_resets (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(255) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX (token),
+            INDEX (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+        // Generate secure token
+        $token = bin2hex(random_bytes(20));
+        $expires = date('Y-m-d H:i:s', time() + 3600); // 1 hour
+
+        // Insert token
+        $stmt = $this->db->prepare("INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)");
+        $stmt->execute([$user['id'], $token, $expires]);
+
+        return ['token' => $token, 'user' => $user];
+    }
+
+    /**
+     * Reset password using token
+     */
+    public function resetPasswordByToken($token, $newPassword) {
+        $sql = "SELECT pr.id, pr.user_id, pr.expires_at, u.email FROM password_resets pr JOIN {$this->table} u ON pr.user_id = u.id WHERE pr.token = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$token]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) return false;
+
+        if (strtotime($row['expires_at']) < time()) {
+            // token expired
+            // Optionally delete expired token
+            $this->db->prepare("DELETE FROM password_resets WHERE id = ?")->execute([$row['id']]);
+            return false;
+        }
+
+        // Update user's password
+        $auth = new Auth();
+        $hash = $auth->hashPassword($newPassword);
+        $this->db->prepare("UPDATE {$this->table} SET password = ?, updated_at = NOW() WHERE id = ?")->execute([$hash, $row['user_id']]);
+
+        // Delete all tokens for this user
+        $this->db->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$row['user_id']]);
+
+        return true;
+    }
 }
-?> 
+?>

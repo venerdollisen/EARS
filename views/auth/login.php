@@ -57,6 +57,11 @@
                                 </button>
                             </div>
                         </form>
+
+                        <!-- Forgot password link -->
+                        <div class="mt-3 text-center">
+                            <a href="<?= APP_URL ?>/forgot-password" class="text-decoration-none">Forgot password?</a>
+                        </div>
                         
                         <!-- Alert Messages -->
                         <div id="alertContainer"></div>
@@ -176,4 +181,4 @@
         }
     </style>
 </body>
-</html> 
+</html>

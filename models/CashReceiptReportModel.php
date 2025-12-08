@@ -30,10 +30,7 @@ class CashReceiptReportModel extends BaseReportModel {
             $params[':supplier_id'] = $filters['supplier_id'];
         }
         
-        if (!empty($filters['project_id'])) {
-            $whereConditions[] = "crd.project_id = :project_id";
-            $params[':project_id'] = $filters['project_id'];
-        }
+        // project_id filter intentionally removed — project filtering is disabled
         
         if (!empty($filters['department_id'])) {
             $whereConditions[] = "crd.department_id = :department_id";

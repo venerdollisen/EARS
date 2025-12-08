@@ -55,17 +55,6 @@
                                         <div class="row mt-3">
                                             <div class="col-md-3">
                                                 <div class="form-group">
-                                                    <label for="project_id">Project</label>
-                                                    <select class="form-control" id="project_id" name="project_id">
-                                                        <option value="">All Projects</option>
-                                                        <?php foreach ($projects as $project): ?>
-                                                            <option value="<?= $project['id'] ?>"><?= $project['project_name'] ?></option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="form-group">
                                                     <label for="department_id">Department</label>
                                                     <select class="form-control" id="department_id" name="department_id">
                                                         <option value="">All Departments</option>
@@ -249,8 +238,6 @@ function generateReport() {
     $('#summaryCards').hide();
     $('#chartsSection').hide();
 
-    console.log('Sending request to:', APP_URL + '/api/cash-receipt-report/generate');
-
     $.ajax({
         url: APP_URL + '/api/cash-receipt-report/generate',
         method: 'POST',
@@ -259,9 +246,6 @@ function generateReport() {
         contentType: false,
         success: function(response) {
             $('#loadingSpinner').hide();
-            console.log('Success callback triggered');
-            console.log('Response type:', typeof response);
-            console.log('Raw response:', response);
             
             // Parse JSON response
             let parsedResponse;
@@ -271,15 +255,12 @@ function generateReport() {
                 } else {
                     parsedResponse = response;
                 }
-                console.log('Parsed response:', parsedResponse);
+
             } catch (e) {
                 console.error('Error parsing response:', e);
                 showAlert('error', 'Invalid response format');
                 return;
             }
-            
-            console.log('parsedResponse.success:', parsedResponse.success);
-            console.log('parsedResponse.success === true:', parsedResponse.success === true);
             
             if (parsedResponse && parsedResponse.success === true) {
                 console.log('Calling displayReportData');
@@ -291,21 +272,15 @@ function generateReport() {
         },
         error: function(xhr, status, error) {
             $('#loadingSpinner').hide();
-            console.error('Error callback triggered');
-            console.error('AJAX Error:', xhr.responseText);
-            console.error('Status:', status);
-            console.error('Error:', error);
-            console.error('Response headers:', xhr.getAllResponseHeaders());
+
             showAlert('error', 'Error generating report: ' + error);
         }
     });
 }
 
-function displayReportData(response) {
-    console.log('Displaying report data:', response);
+function displayReportData(response) {;
     
     if (response.data && response.data.length > 0) {
-        console.log('Found', response.data.length, 'records');
         
         // Display summary cards
         if (response.summary) {
@@ -484,15 +459,4 @@ function showAlert(type, message) {
     $('.card-body').first().prepend(alertHtml);
 }
 
-function testReport() {
-    console.log('Testing report generation...');
-    
-    // Check current form values
-    const formData = new FormData($('#reportForm')[0]);
-    console.log('Form data:');
-    for (let [key, value] of formData.entries()) {
-        console.log(key + ':', value);
-    }
-    
-}
 </script>

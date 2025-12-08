@@ -22,7 +22,6 @@ class CheckDisbursementReportController extends Controller {
             'title' => 'Check Disbursement Report',
             'accounts' => $this->model->getActiveAccounts(),
             'suppliers' => $this->model->getActiveSuppliers(),
-            'projects' => $this->model->getActiveProjects(),
             'departments' => $this->model->getActiveDepartments()
         ]);
     }
@@ -34,7 +33,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_POST['end_date'] ?? '',
                 'account_id' => $_POST['account_id'] ?? '',
                 'supplier_id' => $_POST['supplier_id'] ?? '',
-                'project_id' => $_POST['project_id'] ?? '',
                 'department_id' => $_POST['department_id'] ?? '',
                 'status' => $_POST['status'] ?? ''
             ];
@@ -82,7 +80,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_GET['end_date'] ?? '',
                 'account_id' => $_GET['account_id'] ?? '',
                 'supplier_id' => $_GET['supplier_id'] ?? '',
-                'project_id' => $_GET['project_id'] ?? '',
                 'department_id' => $_GET['department_id'] ?? '',
                 'status' => $_GET['status'] ?? ''
             ];
@@ -104,152 +101,214 @@ class CheckDisbursementReportController extends Controller {
         }
     }
 
-        private function generatePDF($data, $summary, $filters) {
+    private function generatePDF($data, $summary, $filters) {
         try {
-            // Ensure no output has been sent yet
-            if (headers_sent()) {
-                throw new Exception('Headers already sent, cannot output PDF file');
-            }
-            
-            // Create new PDF document with landscape orientation for better table layout
+            // Clean buffer
+            while (ob_get_level()) ob_end_clean();
+            if (headers_sent()) throw new Exception('Headers already sent, cannot output PDF file');
+
+            // ----------------------------------------------------------
+            //  COLUMN SETUP — EXACT 267mm WIDTH (NO OVERLAP)
+            // ----------------------------------------------------------
+            $columns = [
+                ['field' => 'transaction_date', 'label' => 'Date',           'width' => 20, 'align' => 'L'],
+                ['field' => 'supplier_name',    'label' => 'Particulars',    'width' => 50, 'align' => 'L'],
+                ['field' => 'supplier_tin',     'label' => 'TIN',            'width' => 25, 'align' => 'L'],
+                ['field' => 'supplier_address', 'label' => 'Address',        'width' => 50, 'align' => 'L'],
+
+                ['field' => 'amount',           'label' => 'Invoice Amount', 'width' => 25, 'align' => 'R'],
+                ['field' => 'output_tax',       'label' => 'Input Tax',     'width' => 22, 'align' => 'R'],
+                ['field' => 'net_purchase',     'label' => 'Net Purchase',   'width' => 22, 'align' => 'R'],
+
+                // NEW REQUESTED COLUMNS (TEXT UNCHANGED)
+                ['field' => 'expanded',         'label' => 'Expanded',       'width' => 18, 'align' => 'R'],
+                ['field' => 'compensation',     'label' => 'Compensation',   'width' => 25, 'align' => 'R'],
+
+                ['field' => 'diff',             'label' => 'Diff.',          'width' => 10, 'align' => 'R'],
+            ];
+
+            $lineHeight = 6;
+
+            // ----------------------------------------------------------
+            //  TCPDF SETUP
+            // ----------------------------------------------------------
             $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
-        
-            // Set document information
             $pdf->SetCreator('EARS System');
             $pdf->SetAuthor('EARS System');
             $pdf->SetTitle('Check Disbursement Report');
-            $pdf->SetSubject('Check Disbursement Report');
-            
-            // Remove default header/footer
             $pdf->setPrintHeader(false);
             $pdf->setPrintFooter(false);
-            
-            // Set margins
+
             $pdf->SetMargins(15, 15, 15);
-            
-            // Set auto page breaks
-            $pdf->SetAutoPageBreak(TRUE, 15);
-            
-            // Add a page
+            $pdf->SetAutoPageBreak(true, 15);
             $pdf->AddPage();
-            
-            // Set font
-            $pdf->SetFont('helvetica', '', 10);
-            
-            // Title
+
+            // ----------------------------------------------------------
+            //  HEADER
+            // ----------------------------------------------------------
             $pdf->SetFont('helvetica', 'B', 16);
             $pdf->Cell(0, 10, 'CHECK DISBURSEMENT REPORT', 0, 1, 'C');
-            $pdf->Ln(5);
-            
-            // Report period
+            $pdf->Ln(4);
+
             $pdf->SetFont('helvetica', '', 10);
-            $periodText = 'Report Period: ';
-            if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
-                $periodText .= date('F j, Y', strtotime($filters['start_date'])) . ' to ' . date('F j, Y', strtotime($filters['end_date']));
-            } else {
-                $periodText .= 'All Periods';
-            }
-            $pdf->Cell(0, 6, $periodText, 0, 1, 'L');
-            
-            // Generated date
-            $pdf->Cell(0, 6, 'Generated on: ' . date('F j, Y \a\t g:i A'), 0, 1, 'L');
-            $pdf->Ln(5);
-            
-            // Table header
+            $periodText = 'Report Period: ' .
+                (!empty($filters['start_date']) && !empty($filters['end_date'])
+                    ? date('F j, Y', strtotime($filters['start_date'])) . ' to ' . date('F j, Y', strtotime($filters['end_date']))
+                    : 'All Periods');
+
+            $pdf->Cell(0, 6, $periodText, 0, 1);
+            $pdf->Cell(0, 6, 'Generated on: ' . date('F j, Y \a\t g:i A'), 0, 1);
+            $pdf->Ln(4);
+
+
+            // ----------------------------------------------------------
+            //  TABLE HEADER
+            // ----------------------------------------------------------
             $pdf->SetFont('helvetica', 'B', 9);
             $pdf->SetFillColor(230, 230, 230);
-            $pdf->Cell(25, 7, 'Date', 1, 0, 'C', true);
-            $pdf->Cell(40, 7, 'Particulars', 1, 0, 'C', true);
-            $pdf->Cell(35, 7, 'TIN', 1, 0, 'C', true);
-            $pdf->Cell(50, 7, 'Address', 1, 0, 'C', true);
-            $pdf->Cell(25, 7, 'Invoice Amount', 1, 0, 'C', true);
-            $pdf->Cell(25, 7, 'Input Tax', 1, 0, 'C', true);
-            $pdf->Cell(25, 7, 'Net Purchase', 1, 0, 'C', true);
-            $pdf->Cell(20, 7, 'Diff.', 1, 1, 'C', true);
-            
-            // Table data
+
+            foreach ($columns as $col) {
+                $pdf->Cell($col['width'], 7, $col['label'], 1, 0, 'C', true);
+            }
+            $pdf->Ln();
+
+
+            // ----------------------------------------------------------
+            //  TABLE BODY
+            // ----------------------------------------------------------
             $pdf->SetFont('helvetica', '', 8);
+
+            $totals = [
+                'amount'       => 0,
+                'output_tax'   => 0,
+                'net_purchase' => 0,
+                'diff'         => 0,
+            ];
+
             $rowCount = 0;
-            $totalInvoiceAmount = 0;
-            $totalInputTax = 0;
-            $totalNetPurchase = 0;
-            $totalDiff = 0;
-            
-            if (is_array($data) && !empty($data)) {
-                foreach ($data as $record) {
-                    // Calculate text height for wrapping text
-                    $particularsText = $record['supplier_name'] ?? '';
-                    $addressText = $record['supplier_address'] ?? '';
-                    
-                    // Calculate how many lines each text will take
-                    $particularsLines = ceil($pdf->GetStringWidth($particularsText) / 40); // 40mm width
-                    $addressLines = ceil($pdf->GetStringWidth($addressText) / 50); // 50mm width
-                    
-                    // Use the maximum number of lines
-                    $maxLines = max(1, $particularsLines, $addressLines);
-                    $cellHeight = $maxLines * 6; // 6mm per line
-                    
-                    // Calculate values
-                    $invoiceAmount = $record['amount'];
-                    // $inputTax = $invoiceAmount * 0.12; // 12% VAT
-                    $inputTax = 0;
-                    if($record['vat_subject']=='VAT'){
-                        $inputTax = $invoiceAmount * 0.12;
+
+            foreach ($data as $record) {
+
+                // ------------------------------------------------------
+                // CLEAN VALUES (NO MODIFICATION OF TEXT)
+                // ------------------------------------------------------
+                foreach (['supplier_name', 'supplier_tin', 'supplier_address'] as $f) {
+                    if (isset($record[$f])) {
+                        $record[$f] = ltrim($record[$f], " ,");
                     }
-                    $netPurchase = $invoiceAmount - $inputTax;
-                    $diff = 0.00; // Always 0.00 as per the image
-                    
-                    // Add to totals
-                    $totalInvoiceAmount += $invoiceAmount;
-                    $totalInputTax += $inputTax;
-                    $totalNetPurchase += $netPurchase;
-                    $totalDiff += $diff;
-                    
-                    // Create all cells with the same height
-                    $pdf->Cell(25, $cellHeight, date('m/d/Y', strtotime($record['transaction_date'])), 1, 0, 'L');
-                    $pdf->Cell(40, $cellHeight, $particularsText, 1, 0, 'L');
-                    $pdf->Cell(35, $cellHeight, $record['supplier_tin'] ?? 'N/A', 1, 0, 'L');
-                    $pdf->Cell(50, $cellHeight, $addressText, 1, 0, 'L');
-                    $pdf->Cell(25, $cellHeight, number_format($invoiceAmount, 2), 1, 0, 'R');
-                    $pdf->Cell(25, $cellHeight, number_format($inputTax, 2), 1, 0, 'R');
-                    $pdf->Cell(25, $cellHeight, number_format($netPurchase, 2), 1, 0, 'R');
-                    $pdf->Cell(20, $cellHeight, number_format($diff, 2), 1, 1, 'R');
-                    
-                    $rowCount++;
+                }
+
+                // ------------------------------------------------------
+                // COMPUTED FIELDS
+                // ------------------------------------------------------
+                $invoiceAmount = (float) ($record['amount'] ?? 0);
+                $inputTax      = (($record['vat_subject'] ?? '') === 'VAT') ? $invoiceAmount * 0.12 : 0;
+                $netPurchase   = $invoiceAmount - $inputTax;
+
+                $record['output_tax']   = $inputTax;
+                $record['net_purchase'] = $netPurchase;
+                $record['diff']         = 0;
+
+                // ------------------------------------------------------
+                // KEEP expanded & compensation EXACTLY AS PROVIDED
+                // ------------------------------------------------------
+                $record['expanded']     = $record['expanded'] ?? '';
+                $record['compensation'] = $record['compensation'] ?? '';
+
+                // ------------------------------------------------------
+                // DYNAMIC ROW HEIGHT
+                // ------------------------------------------------------
+                $maxLines = 1;
+                foreach ($columns as $col) {
+                    $value = $this->formatCellValue($col['field'], $record);
+                    $lines = $pdf->getNumLines($value, $col['width']);
+                    if ($lines > $maxLines) $maxLines = $lines;
+                }
+                $rowHeight = $maxLines * $lineHeight;
+
+                // ------------------------------------------------------
+                // PRINT ROW
+                // ------------------------------------------------------
+                foreach ($columns as $i => $col) {
+                    $value = $this->formatCellValue($col['field'], $record);
+
+                    $pdf->MultiCell(
+                        $col['width'], $rowHeight,
+                        $value, 1, $col['align'], 0,
+                        ($i === count($columns) - 1 ? 1 : 0),
+                        '', '', true, 0, false, true, 0, 'M'
+                    );
+                }
+
+                // Totals
+                $totals['amount']       += $invoiceAmount;
+                $totals['output_tax']   += $inputTax;
+                $totals['net_purchase'] += $netPurchase;
+
+                $rowCount++;
+            }
+
+
+            // ----------------------------------------------------------
+            //  TOTALS ROW
+            // ----------------------------------------------------------
+            $pdf->SetFont('helvetica', 'B', 9);
+
+            foreach ($columns as $col) {
+                if (isset($totals[$col['field']])) {
+                    $pdf->Cell($col['width'], 7, number_format($totals[$col['field']], 2), 1, 0, 'R', true);
+                } else {
+                    $pdf->Cell($col['width'], 7, '', 1, 0, 'R', true);
                 }
             }
-            
-            // Add totals row
-            $pdf->SetFont('helvetica', 'B', 9);
-            $pdf->Cell(150, 7, 'TOTAL:', 1, 0, 'R', true);
-            $pdf->Cell(25, 7, number_format($totalInvoiceAmount, 2), 1, 0, 'R', true);
-            $pdf->Cell(25, 7, number_format($totalInputTax, 2), 1, 0, 'R', true);
-            $pdf->Cell(25, 7, number_format($totalNetPurchase, 2), 1, 0, 'R', true);
-            $pdf->Cell(20, 7, number_format($totalDiff, 2), 1, 1, 'R', true);
-            
-            // Footer with record count
+            $pdf->Ln();
+
+            // ----------------------------------------------------------
+            // FOOTER
+            // ----------------------------------------------------------
             $pdf->Ln(5);
             $pdf->SetFont('helvetica', '', 9);
-            $pdf->Cell(0, 6, 'Total Records: ' . $rowCount, 0, 1, 'L');
-            
-            // Set headers for download
+            $pdf->Cell(0, 6, 'Total Records: ' . $rowCount, 0, 1);
+
+            // ----------------------------------------------------------
+            // OUTPUT PDF
+            // ----------------------------------------------------------
             header('Content-Type: application/pdf');
             header('Content-Disposition: attachment; filename="check_disbursement_report_' . date('Y-m-d_H-i-s') . '.pdf"');
             header('Cache-Control: no-cache, must-revalidate');
-            header('Pragma: no-cache');
-            
-            // Output PDF for download
-            $pdf->Output('check_disbursement_report_' . date('Y-m-d_H-i-s') . '.pdf', 'D');
-            
+
+            $pdf->Output('cash_receipt_report.pdf', 'D');
+            exit;
+
         } catch (Exception $e) {
-            error_log("Error in generatePDF method: " . $e->getMessage());
-            // If we're already outputting headers, we can't change to JSON
-            // So we'll output a simple error message
-            if (!headers_sent()) {
-                header('Content-Type: text/plain');
-            }
+            if (!headers_sent()) header('Content-Type: text/plain');
             echo "Error generating PDF: " . $e->getMessage();
             exit;
+        }
+    }
+
+    private function formatCellValue($field, $record) {
+        switch ($field) {
+
+            case 'transaction_date':
+                return !empty($record[$field]) ? date('m/d/Y', strtotime($record[$field])) : '';
+
+            case 'amount':
+            case 'output_tax':
+            case 'net_purchase':
+            case 'diff':
+                return number_format((float)$record[$field], 2);
+
+            // Expanded and Compensation — RETURN AS IS (your request)
+            case 'expanded':
+            case 'compensation':
+                return $record[$field] ?? '';
+
+            case 'supplier_tin':
+                return $record[$field] ?? 'N/A';
+
+            default:
+                return $record[$field] ?? '';
         }
     }
     
@@ -265,7 +324,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_GET['end_date'] ?? '',
                 'account_id' => $_GET['account_id'] ?? '',
                 'supplier_id' => $_GET['supplier_id'] ?? '',
-                'project_id' => $_GET['project_id'] ?? '',
                 'department_id' => $_GET['department_id'] ?? '',
                 'status' => $_GET['status'] ?? ''
             ];
@@ -418,7 +476,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_GET['end_date'] ?? '',
                 'account_id' => $_GET['account_id'] ?? '',
                 'supplier_id' => $_GET['supplier_id'] ?? '',
-                'project_id' => $_GET['project_id'] ?? '',
                 'department_id' => $_GET['department_id'] ?? '',
                 'status' => $_GET['status'] ?? ''
             ];
@@ -573,7 +630,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_POST['end_date'] ?? '',
                 'account_id' => $_POST['account_id'] ?? '',
                 'supplier_id' => $_POST['supplier_id'] ?? '',
-                'project_id' => $_POST['project_id'] ?? '',
                 'department_id' => $_POST['department_id'] ?? '',
                 'status' => $_POST['status'] ?? ''
             ];
@@ -592,7 +648,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_POST['end_date'] ?? '',
                 'account_id' => $_POST['account_id'] ?? '',
                 'supplier_id' => $_POST['supplier_id'] ?? '',
-                'project_id' => $_POST['project_id'] ?? '',
                 'department_id' => $_POST['department_id'] ?? '',
                 'status' => $_POST['status'] ?? ''
             ];
@@ -611,7 +666,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_POST['end_date'] ?? '',
                 'account_id' => $_POST['account_id'] ?? '',
                 'supplier_id' => $_POST['supplier_id'] ?? '',
-                'project_id' => $_POST['project_id'] ?? '',
                 'department_id' => $_POST['department_id'] ?? '',
                 'status' => $_POST['status'] ?? ''
             ];
@@ -631,7 +685,6 @@ class CheckDisbursementReportController extends Controller {
                 'end_date' => $_POST['end_date'] ?? '',
                 'account_id' => $_POST['account_id'] ?? '',
                 'supplier_id' => $_POST['supplier_id'] ?? '',
-                'project_id' => $_POST['project_id'] ?? '',
                 'department_id' => $_POST['department_id'] ?? '',
                 'status' => $_POST['status'] ?? ''
             ];

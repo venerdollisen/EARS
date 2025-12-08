@@ -2,9 +2,12 @@
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 class="h3 mb-0">Subsidiary Accounts</h1>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal">
-                <i class="bi bi-plus-circle me-2"></i>Add Subsidiary Account
-            </button>
+            <div>
+                <button type="button" class="btn btn-secondary me-2" id="exportPdfBtn"><i class="bi bi-file-earmark-pdf me-2"></i>Export PDF</button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal">
+                    <i class="bi bi-plus-circle me-2"></i>Add Subsidiary Account
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -302,6 +305,13 @@ function saveSupplier() {
     });
 }
 
+// Export PDF
+document.getElementById('exportPdfBtn').addEventListener('click', function() {
+    const url = APP_URL + '/api/file-maintenance/subsidiary/export-pdf';
+    // Open in new tab to trigger download
+    window.open(url, '_blank');
+});
+
 // Use EARS.showAlert instead of local showAlert function
 function showAlert(message, type) {
     if (window.EARS && window.EARS.showAlert) {
@@ -337,4 +347,4 @@ $('#supplierModal').on('hidden.bs.modal', function() {
     document.getElementById('action').value = 'create';
     document.getElementById('supplier_id').value = '';
 });
-</script> 
+</script>

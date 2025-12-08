@@ -22,7 +22,6 @@ class CashDisbursementReportModel extends BaseReportModel {
                         coa.account_code,
                         coa.account_name,
                         s.supplier_name,
-                        p.project_name,
                         d.department_name,
                         u.username as created_by,
                         cd.created_at
@@ -30,7 +29,6 @@ class CashDisbursementReportModel extends BaseReportModel {
                     LEFT JOIN cash_disbursement_details cdd ON cd.id = cdd.cash_disbursement_id
                     LEFT JOIN chart_of_accounts coa ON cdd.account_id = coa.id
                     LEFT JOIN suppliers s ON cdd.supplier_id = s.id
-                    LEFT JOIN projects p ON cdd.project_id = p.id
                     LEFT JOIN departments d ON cdd.department_id = d.id
                     LEFT JOIN users u ON cd.created_by = u.id
                     {$whereClause['where']}
@@ -194,10 +192,7 @@ class CashDisbursementReportModel extends BaseReportModel {
             $params[':supplier_id'] = $filters['supplier_id'];
         }
         
-        if (!empty($filters['project_id'])) {
-            $whereConditions[] = "cdd.project_id = :project_id";
-            $params[':project_id'] = $filters['project_id'];
-        }
+        // project_id filter intentionally removed — project filtering is disabled
         
         if (!empty($filters['department_id'])) {
             $whereConditions[] = "cdd.department_id = :department_id";

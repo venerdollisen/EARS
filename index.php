@@ -26,6 +26,12 @@ $router->addRoute('/logout', 'AuthController@logout');
 $router->addRoute('/api/login', 'AuthController@apiLogin');
 $router->addRoute('/api/logout', 'AuthController@apiLogout');
 
+// Add forgot/reset password routes
+$router->addRoute('/forgot-password', 'AuthController@forgot');
+$router->addRoute('/reset-password', 'AuthController@reset');
+$router->addRoute('/api/forgot-password', 'AuthController@apiForgotPassword');
+$router->addRoute('/api/reset-password', 'AuthController@apiResetPassword');
+
 // Dashboard routes
 $router->addRoute('/dashboard', 'DashboardController@index');
 $router->addRoute('/parameters', 'ParametersController@index');
@@ -49,6 +55,9 @@ $router->addRoute('/file-maintenance/chart-of-accounts', 'FileMaintenanceControl
 $router->addRoute('/file-maintenance/subsidiary-account', 'FileMaintenanceController@subsidiaryAccount');
 $router->addRoute('/file-maintenance/projects', 'FileMaintenanceController@projects');
 $router->addRoute('/file-maintenance/departments', 'FileMaintenanceController@departments');
+
+// Export subsidiary accounts PDF
+$router->addRoute('/api/file-maintenance/subsidiary/export-pdf', 'FileMaintenanceController@exportSubsidiaryPdf');
 
 // Transaction Entries routes
 $router->addRoute('/transaction-entries', 'TransactionEntriesController@index');
@@ -239,4 +248,4 @@ $router->addRoute('/api/transactions/check_disbursement/{id}/reject', 'Transacti
 
 // Handle the request
 $router->dispatch();
-?> 
+?>
