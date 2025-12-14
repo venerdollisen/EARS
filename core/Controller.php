@@ -17,6 +17,23 @@ class Controller {
         // Extract data to variables
         extract($data);
         
+        // Map views to permission keys (uses AuthorizationTrait::requirePermission)
+        $viewPermissionMap = [
+            'file-maintenance/index' => 'file_maintenance',
+            'file-maintenance/list' => 'file_maintenance',
+            'file-maintenance/coa-account-type' => 'file_maintenance',
+            'settings/index' => 'system_settings',
+            'users/index' => 'user_management',
+            // reports and transactions can be added here if needed
+        ];
+
+        // If this is a normal page (not API and not standalone) and view maps to a permission, enforce it
+        if (!$this->isApiRequest() && !$this->isStandalonePage($view)) {
+            if (isset($viewPermissionMap[$view])) {
+                $this->requirePermission($viewPermissionMap[$view]);
+            }
+        }
+        
         // Start output buffering
         ob_start();
         

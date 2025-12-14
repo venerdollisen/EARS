@@ -21,7 +21,7 @@ if (!isset($user)) {
             </a>
         </li>
         
-        <?php if (hasPermission($user, 'parameters')): ?>
+        <?php if (1): ?>
         <li class="nav-item">
             <a href="#parametersSubmenu" data-bs-toggle="collapse" class="nav-link <?= strpos($_SERVER['REQUEST_URI'], '/parameters') !== false ? 'active' : '' ?>">
                 <i class="bi bi-gear"></i>
@@ -208,7 +208,7 @@ if (!isset($user)) {
                         <span>Profile</span>
                     </a>
                 </li>
-                <?php if (hasPermission($user, 'system_settings')): ?>
+                <?php if (hasPermission($user, 'system_settings') && !isManager($user)): ?>
                 <li class="nav-item">
                     <a href="<?=APP_URL?>/settings/general" class="nav-link">
                         <i class="bi bi-circle"></i>

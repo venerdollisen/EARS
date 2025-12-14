@@ -34,13 +34,13 @@ trait AuthorizationTrait {
         
         switch ($permission) {
             case 'file_maintenance':
-                return in_array($role, ['admin', 'manager']);
+                return in_array($role, ['admin']);
             case 'parameters':
                 return true;
             case 'user_management':
             case 'audit_trail':
             case 'system_settings':
-                return in_array($role, ['admin', 'manager']);
+                return in_array($role, ['admin']);
                 
             case 'transaction_entries':
             case 'reports':

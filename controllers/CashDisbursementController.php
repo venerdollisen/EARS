@@ -155,14 +155,14 @@ class CashDisbursementController extends Controller {
             }
             
             // Show warnings if any (but allow transaction to proceed)
-            if (!empty($validationResult['warnings'])) {
-                echo json_encode([
-                    'success' => false,
-                    'warning' => 'Transaction has warnings but is valid',
-                    'message' => 'Please review the warnings: ' . implode(', ', $validationResult['warnings'])
-                ]);
-                return;
-            }
+            // if (!empty($validationResult['warnings'])) {
+            //     echo json_encode([
+            //         'success' => false,
+            //         'warning' => 'Transaction has warnings but is valid',
+            //         'message' => 'Please review the warnings: ' . implode(', ', $validationResult['warnings'])
+            //     ]);
+            //     return;
+            // }
             
             // Enforce default Pending statuses for assistants/users
             try {

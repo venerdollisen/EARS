@@ -228,7 +228,7 @@ class CashReceiptReportController extends Controller {
             // ----------------------------------------------------------
             $columns = [
                 ['field' => 'transaction_date', 'label' => 'Date',           'width' => 20, 'align' => 'L'],
-                ['field' => 'supplier_name',    'label' => 'Particulars',    'width' => 50, 'align' => 'L'],
+                ['field' => 'supplier_name',    'label' => 'Particulars',    'width' =>75, 'align' => 'L'],
                 ['field' => 'supplier_tin',     'label' => 'TIN',            'width' => 25, 'align' => 'L'],
                 ['field' => 'supplier_address', 'label' => 'Address',        'width' => 50, 'align' => 'L'],
 
