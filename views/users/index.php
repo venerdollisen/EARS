@@ -22,19 +22,20 @@
             <tbody>
               <?php foreach ($users as $u): ?>
                 <?php 
+                  $u['new_role']='Bookkeeper';
                   if($u['role']=='admin'){
-                    $u['role']='Finance Manager';
+                    $u['new_role']='Finance Manager';
                   } elseif($u['role']=='manager'){
-                    $u['role']='BIR';
+                    $u['new_role']='BIR';
                   } else {
-                    $u['role']='Bookkeeper';
+                    $u['new_role']='Bookkeeper';
                   }
                 ?>
                 <tr>
                   <td><?= htmlspecialchars($u['full_name'] ?? '-') ?></td>
                   <td><?= htmlspecialchars($u['username']) ?></td>
                   <td><?= htmlspecialchars($u['email'] ?? '-') ?></td>
-                  <td><span class="badge bg-secondary"><?= htmlspecialchars($u['role']) ?></span></td>
+                  <td><span class="badge bg-secondary"><?= htmlspecialchars($u['new_role']) ?></span></td>
                   <td><span class="badge <?= ($u['status'] ?? 'active') === 'active' ? 'bg-success' : 'bg-secondary' ?>"><?= htmlspecialchars($u['status'] ?? 'active') ?></span></td>
                   <td><?= htmlspecialchars($u['created_at'] ?? '-') ?></td>
                   <td>

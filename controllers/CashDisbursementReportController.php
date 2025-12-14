@@ -174,7 +174,7 @@ class CashDisbursementReportController extends Controller {
                 ['field' => 'supplier_address', 'label' => 'Address',        'width' => 50, 'align' => 'L'],
 
                 ['field' => 'amount',           'label' => 'Invoice Amount', 'width' => 25, 'align' => 'R'],
-                ['field' => 'output_tax',       'label' => 'Output Tax',     'width' => 22, 'align' => 'R'],
+                ['field' => 'output_tax',       'label' => 'Input Tax',     'width' => 22, 'align' => 'R'],
                 ['field' => 'net_purchase',     'label' => 'Net Purchase',   'width' => 22, 'align' => 'R'],
 
                 // NEW REQUESTED COLUMNS (TEXT UNCHANGED)
@@ -334,7 +334,7 @@ class CashDisbursementReportController extends Controller {
             header('Content-Disposition: attachment; filename="cash_disbursement_report_' . date('Y-m-d_H-i-s') . '.pdf"');
             header('Cache-Control: no-cache, must-revalidate');
 
-            $pdf->Output('cash_receipt_report.pdf', 'D');
+            $pdf->Output('cash_disbursement_report.pdf', 'D');
             exit;
 
         } catch (Exception $e) {

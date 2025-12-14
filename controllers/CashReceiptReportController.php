@@ -237,7 +237,7 @@ class CashReceiptReportController extends Controller {
                 ['field' => 'net_purchase',     'label' => 'Net Purchase',   'width' => 22, 'align' => 'R'],
 
                 ['field' => 'expanded',         'label' => 'Expanded',       'width' => 18, 'align' => 'R'],
-                ['field' => 'compensation',     'label' => 'Compensation',   'width' => 25, 'align' => 'R'],
+                // ['field' => 'compensation',     'label' => 'Compensation',   'width' => 25, 'align' => 'R'],
 
                 ['field' => 'diff',             'label' => 'Diff.',          'width' => 10, 'align' => 'R'],
             ];

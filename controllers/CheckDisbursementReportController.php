@@ -277,7 +277,7 @@ class CheckDisbursementReportController extends Controller {
             header('Content-Disposition: attachment; filename="check_disbursement_report_' . date('Y-m-d_H-i-s') . '.pdf"');
             header('Cache-Control: no-cache, must-revalidate');
 
-            $pdf->Output('cash_receipt_report.pdf', 'D');
+            $pdf->Output('check_disbursement.pdf', 'D');
             exit;
 
         } catch (Exception $e) {

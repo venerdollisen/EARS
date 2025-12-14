@@ -297,26 +297,39 @@ function displayReportData(response) {
             $('#summaryCards').show();
             console.log('Summary cards displayed');
         }
-        
-        tbody.empty();
+        // Safely update table if the table exists in the DOM
+        const tbody = $('#reportTableBody');
+        if (tbody.length) {
+            tbody.empty();
+            response.data.forEach(function(row, index) {
+                const tr = $('<tr>');
+                tr.append('<td>' + formatDate(row.transaction_date) + '</td>');
+                tr.append('<td>' + (row.reference_number || '') + '</td>');
+                tr.append('<td>' + (row.account_code || '') + ' - ' + (row.account_name || '') + '</td>');
+                tr.append('<td>' + (row.supplier_name || '') + '</td>');
+                tr.append('<td class="text-end">' + parseFloat(row.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
+                tr.append('<td>' + (row.payment_form || '') + '</td>');
+                tr.append('<td><span class="badge bg-' + getStatusColor(row.status) + '">' + (row.status || '') + '</span></td>');
+                tr.append('<td>' + (row.created_by || '') + '</td>');
+                tbody.append(tr);
+            });
 
-        
-        response.data.forEach(function(row, index) {
-);
-            const tr = $('<tr>');
-            tr.append('<td>' + formatDate(row.transaction_date) + '</td>');
-            tr.append('<td>' + (row.reference_number || '') + '</td>');
-            tr.append('<td>' + (row.account_code || '') + ' - ' + (row.account_name || '') + '</td>');
-            tr.append('<td>' + (row.supplier_name || '') + '</td>');
-            tr.append('<td class="text-end">' + parseFloat(row.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</td>');
-            tr.append('<td>' + (row.payment_form || '') + '</td>');
-            tr.append('<td><span class="badge bg-' + getStatusColor(row.status) + '">' + (row.status || '') + '</span></td>');
-            tr.append('<td>' + (row.created_by || '') + '</td>');
-            tbody.append(tr);
+            $('#reportData').show();
+        } else {
+            // If table is not present, ensure the 'no data' area is hidden so summary/charts can show
+            $('#reportData').hide();
+        }
 
-        });
-        
-        $('#reportData').show();
+        // Show charts if chart data exists
+        if (response.charts) {
+            if (Array.isArray(response.charts.byPaymentForm) && response.charts.byPaymentForm.length > 0) {
+                createPaymentFormChart(response.charts.byPaymentForm);
+            }
+            if (Array.isArray(response.charts.byAccount) && response.charts.byAccount.length > 0) {
+                createAccountChart(response.charts.byAccount);
+            }
+            $('#chartsSection').show();
+        }
     } else {
         console.log('No data found, showing no data message');
         $('#noDataMessage').show();
