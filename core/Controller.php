@@ -24,6 +24,7 @@ class Controller {
             'file-maintenance/coa-account-type' => 'file_maintenance',
             'settings/index' => 'system_settings',
             'users/index' => 'user_management',
+            'users/index' => 'user_management',
             // reports and transactions can be added here if needed
         ];
 

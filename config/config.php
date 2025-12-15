@@ -28,6 +28,6 @@ define('EMAIL_HOST', 'smtp.gmail.com');      // SMTP server
 define('EMAIL_PORT', 587);                        // 587 = TLS, 465 = SSL
 define('EMAIL_USERNAME', 'kulotsivener13@gmail.com'); // SMTP username
 define('EMAIL_PASSWORD', 'dham uxqi zyio ward');    // SMTP password
-define('EMAIL_FROM', 'noreply@yourdomain.com');     // From email
+define('EMAIL_FROM', 'kulotsivener13@gmail.com');     // From email
 define('EMAIL_FROM_NAME', APP_NAME);                // From name
 define('EMAIL_ENCRYPTION', 'tls');                  // 'tls' or 'ssl'
