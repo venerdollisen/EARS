@@ -58,14 +58,14 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Receipts
+                                Input Tax
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ₱<?php echo number_format($summaryData['overall']['total_receipts'], 2); ?>
+                                ₱<?php echo number_format($summaryData['overall']['input_tax'] ?? 0, 2); ?>
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-cash-coin fa-2x text-gray-300"></i>
+                            <i class="bi bi-receipt fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -77,9 +77,9 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Cash Disbursement</div>
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Output Tax</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ₱<?php echo number_format($summaryData['cash_disbursement']['total_amount'], 2); ?>
+                                ₱<?php echo number_format($summaryData['overall']['output_tax'] ?? 0, 2); ?>
                             </div>
                         </div>
                         <div class="col-auto">
@@ -95,13 +95,13 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Check Disbursement</div>
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Withholding Tax Compensation</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ₱<?php echo number_format($summaryData['check_disbursement']['total_amount'], 2); ?>
+                                ₱<?php echo number_format($summaryData['overall']['withholding_tax_compensation'] ?? 0, 2); ?>
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-receipt fa-2x text-gray-300"></i>
+                            <i class="bi bi-cash-coin fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -113,13 +113,13 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Total Transactions</div>
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">WTax Payables - Expanded</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                <?php echo number_format($summaryData['overall']['total_transactions']); ?>
+                                ₱<?php echo number_format($summaryData['overall']['expanded_withholding_tax'] ?? 0, 2); ?>
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-journal-text fa-2x text-gray-300"></i>
+                            <i class="bi bi-graph-up fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -351,6 +351,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Keep chart instances so we can destroy before re-creating to avoid "canvas already in use" errors
+let monthlyChart = null;
+let accountTypeChart = null;
+
 $(document).ready(function() {
     initSavedFilters();
     loadOverview();
@@ -375,6 +379,12 @@ function loadMonthlyData() {
 function createMonthlyChart(data) {
     const ctx = document.getElementById('monthlyChart').getContext('2d');
     
+    // Destroy previous chart instance if exists
+    if (monthlyChart) {
+        try { monthlyChart.destroy(); } catch (e) { console.warn('Failed to destroy monthlyChart', e); }
+        monthlyChart = null;
+    }
+
     // Process data for chart
     const months = [...new Set(data.map(item => item.month))].sort();
     const cashReceiptData = months.map(month => {
@@ -390,7 +400,7 @@ function createMonthlyChart(data) {
         return monthData.length > 0 ? parseFloat(monthData[0].total_amount) : 0;
     });
 
-    new Chart(ctx, {
+    monthlyChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: months.map(month => {
@@ -447,7 +457,13 @@ function loadAccountTypeData() {
 function createAccountTypeChart(data) {
     const ctx = document.getElementById('accountTypeChart').getContext('2d');
     
-    new Chart(ctx, {
+    // Destroy previous chart instance if exists
+    if (accountTypeChart) {
+        try { accountTypeChart.destroy(); } catch (e) { console.warn('Failed to destroy accountTypeChart', e); }
+        accountTypeChart = null;
+    }
+
+    accountTypeChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: data.map(item => item.group_name),
@@ -486,6 +502,27 @@ function initSavedFilters() {
     if (saved.date_to) $('#sumDateTo').val(saved.date_to);
 }
 
+// Ensure date strings are normalized to ISO (yyyy-mm-dd) before sending to backend
+function normalizeDateForBackend(d) {
+    if (!d) return '';
+    // If already ISO-like, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    // If user/locale produced dd/mm/yyyy, convert it
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d)) {
+        const parts = d.split('/'); // dd, mm, yyyy
+        const dd = parts[0].padStart(2,'0');
+        const mm = parts[1].padStart(2,'0');
+        const yyyy = parts[2];
+        return `${yyyy}-${mm}-${dd}`;
+    }
+    // Fallback: try to parse and format
+    const parsed = new Date(d);
+    if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().slice(0,10);
+    }
+    return '';
+}
+
 function quickRange(kind) {
     const today = new Date();
     if (kind === 'month') {
@@ -510,10 +547,14 @@ function quickRange(kind) {
 }
 
 function currentFilters() {
-    const date_from = $('#sumDateFrom').val();
-    const date_to = $('#sumDateTo').val();
-    const q = $.param({ date_from, date_to });
-    localStorage.setItem('summary_filters', JSON.stringify({ date_from, date_to }));
+    let date_from = $('#sumDateFrom').val();
+    let date_to = $('#sumDateTo').val();
+    // normalize to yyyy-mm-dd so backend SQL comparisons work reliably
+    const normFrom = normalizeDateForBackend(date_from);
+    const normTo = normalizeDateForBackend(date_to);
+    const q = $.param({ date_from: normFrom, date_to: normTo });
+    // Save the original display values to localStorage for UX, but keep normalized when sending
+    localStorage.setItem('summary_filters', JSON.stringify({ date_from: date_from, date_to: date_to }));
     return q;
 }
 
@@ -532,18 +573,23 @@ function resetSummaryFilters() {
 }
 
 function loadOverview() {
-    $.get(APP_URL + '/api/summary/overview?' + currentFilters(), function(resp){
+    const url = APP_URL + '/api/summary/overview?' + currentFilters();
+
+    $.get(url, function(resp){
+
         if (!resp.success) return;
-        const d = resp.data;
-        // Update numbers on the cards
-        // Total Receipts
-        $(".card:contains('Total Receipts') .h5").text('₱' + numberFormat(d.total_receipts));
-        // Total Cash Disbursement
-        $(".card:contains('Total Cash Disbursement') .h5").text('₱' + numberFormat(d.cash_disbursement_total));
-        // Total Check Disbursement
-        $(".card:contains('Total Check Disbursement') .h5").text('₱' + numberFormat(d.check_disbursement_total));
-        // Total Transactions
-        $(".card:contains('Total Transactions') .h5").text(numberFormat(d.total_transactions));
+        const d = resp.data || {};
+        // Update numbers on the cards (tax-focused summary)
+        // Only update card values if response contains numbers (avoid overwriting with zeros accidentally)
+        if (typeof d.input_tax !== 'undefined') $(".card:contains('Input Tax') .h5").text('₱' + numberFormat(d.input_tax || 0));
+        if (typeof d.output_tax !== 'undefined') $(".card:contains('Output Tax') .h5").text('₱' + numberFormat(d.output_tax || 0));
+        if (typeof d.withholding_tax_compensation !== 'undefined') $(".card:contains('Withholding Tax Compensation') .h5").text('₱' + numberFormat(d.withholding_tax_compensation || 0));
+        if (typeof d.expanded_withholding_tax !== 'undefined') $(".card:contains('WTax Payables - Expanded') .h5").text('₱' + numberFormat(d.expanded_withholding_tax || 0));
+        // Update totals and transactions for backward compatibility
+        $(".card:contains('Total Receipts') .h5").text('₱' + numberFormat(d.total_receipts || 0));
+        $(".card:contains('Total Cash Disbursement') .h5").text('₱' + numberFormat(d.cash_disbursement_total || 0));
+        $(".card:contains('Total Check Disbursement') .h5").text('₱' + numberFormat(d.check_disbursement_total || 0));
+        $(".card:contains('Total Transactions') .h5").text(numberFormat(d.total_transactions || 0));
     });
 }
 

@@ -45,15 +45,25 @@ class SummaryController extends Controller {
             $cashDisbursementTotal = $this->sumAmount('cash_disbursement', $dateFrom, $dateTo);
             $checkDisbursementTotal = $this->sumAmount('check_disbursement', $dateFrom, $dateTo);
             $totalReceipts = $this->sumAmount('cash_receipt', $dateFrom, $dateTo);
-            
+            // Tax account totals (use account IDs configured in UI)
+            $inputTaxTotal = $this->getTaxAccountTotal(1001, $dateFrom, $dateTo);
+            $outputTaxTotal = $this->getTaxAccountTotal(1002, $dateFrom, $dateTo);
+            $withholdingTotal = $this->getTaxAccountTotal(1003, $dateFrom, $dateTo);
+            $expandedWtaxTotal = $this->getTaxAccountTotal(1004, $dateFrom, $dateTo);
+
             $overview = [
                 'total_receipts' => $totalReceipts,
                 'cash_disbursement_total' => $cashDisbursementTotal,
                 'check_disbursement_total' => $checkDisbursementTotal,
                 'total_disbursements' => $cashDisbursementTotal + $checkDisbursementTotal,
                 'net_cash_flow' => $totalReceipts - ($cashDisbursementTotal + $checkDisbursementTotal),
-                'total_transactions' => $this->countHeaders(null, $dateFrom, $dateTo)
+                'total_transactions' => $this->countHeaders(null, $dateFrom, $dateTo),
+                'input_tax' => $inputTaxTotal,
+                'output_tax' => $outputTaxTotal,
+                'withholding_tax_compensation' => $withholdingTotal,
+                'expanded_withholding_tax' => $expandedWtaxTotal
             ];
+
             $this->jsonResponse(['success' => true, 'data' => $overview]);
         } catch (Exception $e) {
             $this->jsonResponse(['success' => false, 'message' => $e->getMessage()], 500);
@@ -115,50 +125,111 @@ class SummaryController extends Controller {
      * Get summary data for all books
      */
     private function getSummaryData() {
+        // Resolve optional date filters from query string (or defaults)
+        [$dateFrom, $dateTo] = $this->resolveDateRange();
+
         $data = [];
-        
-        // Cash Receipt Summary
+
+        // Cash Receipt Summary (within date range)
         $data['cash_receipt'] = [
-            'total_count' => $this->getTransactionCount('cash_receipt'),
-            'total_amount' => $this->getTransactionAmount('cash_receipt'),
+            'total_count' => $this->getTransactionCountRange('cash_receipt', $dateFrom, $dateTo),
+            'total_amount' => $this->getTransactionAmountRange('cash_receipt', $dateFrom, $dateTo),
             'this_month_count' => $this->getTransactionCountByMonth('cash_receipt'),
             'this_month_amount' => $this->getTransactionAmountByMonth('cash_receipt'),
             'recent_transactions' => $this->cashReceiptModel->getRecentCashReceipts(5)
         ];
-        
-        // Cash Disbursement Summary
+
+        // Cash Disbursement Summary (within date range)
         $data['cash_disbursement'] = [
-            'total_count' => $this->getTransactionCount('cash_disbursement'),
-            'total_amount' => $this->getTransactionAmount('cash_disbursement'),
+            'total_count' => $this->getTransactionCountRange('cash_disbursement', $dateFrom, $dateTo),
+            'total_amount' => $this->getTransactionAmountRange('cash_disbursement', $dateFrom, $dateTo),
             'this_month_count' => $this->getTransactionCountByMonth('cash_disbursement'),
             'this_month_amount' => $this->getTransactionAmountByMonth('cash_disbursement'),
             'recent_transactions' => $this->cashDisbursementModel->getRecentCashDisbursements(5)
         ];
-        
-        // Check Disbursement Summary
+
+        // Check Disbursement Summary (within date range)
         $data['check_disbursement'] = [
-            'total_count' => $this->getTransactionCount('check_disbursement'),
-            'total_amount' => $this->getTransactionAmount('check_disbursement'),
+            'total_count' => $this->getTransactionCountRange('check_disbursement', $dateFrom, $dateTo),
+            'total_amount' => $this->getTransactionAmountRange('check_disbursement', $dateFrom, $dateTo),
             'this_month_count' => $this->getTransactionCountByMonth('check_disbursement'),
             'this_month_amount' => $this->getTransactionAmountByMonth('check_disbursement'),
             'recent_transactions' => $this->checkDisbursementModel->getRecentCheckDisbursements(5)
         ];
-        
+
         // Account Summary
         $data['accounts'] = [
             'total_accounts' => $this->chartOfAccountsModel->getAllAccounts(),
             'account_types' => $this->getAccountTypeSummary()
         ];
-        
+
+        // Tax Account Totals (from detail tables) - filtered by date range
+        $inputTaxTotal = $this->getTaxAccountTotal(1001, $dateFrom, $dateTo);         // Input Tax
+        $outputTaxTotal = $this->getTaxAccountTotal(1002, $dateFrom, $dateTo);        // Output Tax
+        $withholding = $this->getTaxAccountTotal(1003, $dateFrom, $dateTo);           // Withholding Tax Compensation
+        $expandedWtax = $this->getTaxAccountTotal(1004, $dateFrom, $dateTo);          // WTax Payables - Expanded
+
         // Overall Summary
         $data['overall'] = [
             'total_receipts' => $data['cash_receipt']['total_amount'],
             'total_disbursements' => $data['cash_disbursement']['total_amount'] + $data['check_disbursement']['total_amount'],
             'net_cash_flow' => $data['cash_receipt']['total_amount'] - ($data['cash_disbursement']['total_amount'] + $data['check_disbursement']['total_amount']),
-            'total_transactions' => $data['cash_receipt']['total_count'] + $data['cash_disbursement']['total_count'] + $data['check_disbursement']['total_count']
+            'total_transactions' => $data['cash_receipt']['total_count'] + $data['cash_disbursement']['total_count'] + $data['check_disbursement']['total_count'],
+            'input_tax' => $inputTaxTotal,
+            'output_tax' => $outputTaxTotal,
+            'withholding_tax_compensation' => $withholding,
+            'expanded_withholding_tax' => $expandedWtax
         ];
-        
+
         return $data;
+    }
+    
+    /**
+     * Get tax account total from all detail tables
+     */
+    private function debugQuery($sql, $params)
+    {
+        foreach ($params as $param) {
+            $value = is_numeric($param) ? $param : "'" . addslashes($param) . "'";
+            $sql = preg_replace('/\?/', $value, $sql, 1);
+        }
+        return $sql;
+    }
+
+    private function getTaxAccountTotal($accountId, $dateFrom = null, $dateTo = null) {
+        try {
+            // Build a single query that sums amounts from each details table joined to their headers
+            $sql = "SELECT (" .
+                   "COALESCE((SELECT SUM(crd.amount) FROM cash_receipt_details crd JOIN cash_receipts cr ON cr.id = crd.cash_receipt_id WHERE crd.account_id = ?" .
+                   ($dateFrom && $dateTo ? " AND cr.transaction_date BETWEEN ? AND ?" : "") .
+                   "), 0) + " .
+                   "COALESCE((SELECT SUM(cdd.amount) FROM cash_disbursement_details cdd JOIN cash_disbursements cd ON cd.id = cdd.cash_disbursement_id WHERE cdd.account_id = ?" .
+                   ($dateFrom && $dateTo ? " AND cd.transaction_date BETWEEN ? AND ?" : "") .
+                   "), 0) + " .
+                   "COALESCE((SELECT SUM(chd.amount) FROM check_disbursement_details chd JOIN check_disbursements ch ON ch.id = chd.check_disbursement_id WHERE chd.account_id = ?" .
+                   ($dateFrom && $dateTo ? " AND ch.transaction_date BETWEEN ? AND ?" : "") .
+                   "), 0) ) as total";
+
+            // Build params in the same order as placeholders
+            $execParams = [];
+            // receipts
+            $execParams[] = $accountId;
+            if ($dateFrom && $dateTo) { $execParams[] = $dateFrom; $execParams[] = $dateTo; }
+            // disbursements
+            $execParams[] = $accountId;
+            if ($dateFrom && $dateTo) { $execParams[] = $dateFrom; $execParams[] = $dateTo; }
+            // checks
+            $execParams[] = $accountId;
+            if ($dateFrom && $dateTo) { $execParams[] = $dateFrom; $execParams[] = $dateTo; }
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($execParams);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (float)($result['total'] ?? 0);
+        } catch (Exception $e) {
+            error_log("Error getting tax account total for account_id {$accountId}: " . $e->getMessage());
+            return 0;
+        }
     }
     
     /**
@@ -174,6 +245,20 @@ class SummaryController extends Controller {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['count'] ?? 0;
     }
+
+    /**
+     * Get transaction count within a date range
+     */
+    private function getTransactionCountRange($type, $dateFrom, $dateTo) {
+        $table = $this->getTableName($type);
+        if (!$table) return 0;
+
+        $sql = "SELECT COUNT(*) as count FROM {$table} WHERE transaction_date BETWEEN ? AND ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$dateFrom, $dateTo]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['count'] ?? 0;
+    }
     
     /**
      * Get transaction amount by type
@@ -185,6 +270,20 @@ class SummaryController extends Controller {
         $sql = "SELECT COALESCE(SUM(total_amount), 0) as total FROM {$table}";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Get transaction total amount within a date range
+     */
+    private function getTransactionAmountRange($type, $dateFrom, $dateTo) {
+        $table = $this->getTableName($type);
+        if (!$table) return 0;
+
+        $sql = "SELECT COALESCE(SUM(total_amount), 0) as total FROM {$table} WHERE transaction_date BETWEEN ? AND ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$dateFrom, $dateTo]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;
     }
