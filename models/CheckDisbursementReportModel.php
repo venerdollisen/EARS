@@ -83,6 +83,11 @@ class CheckDisbursementReportModel extends BaseReportModel {
                         MIN(d.department_name) as department_name,
                         MIN(u.username) as created_by,
                         MIN(chd.created_at) as created_at
+                        -- Tax-specific totals from check_disbursement_details (account_id)
+                    , SUM(CASE WHEN chdd.account_id = 1001 THEN chdd.amount ELSE 0 END) AS input_tax_amount
+                    , SUM(CASE WHEN chdd.account_id = 1002 THEN chdd.amount ELSE 0 END) AS output_tax_amount
+                    , SUM(CASE WHEN chdd.account_id = 1003 THEN chdd.amount ELSE 0 END) AS withholding_tax_compensation_amount
+                    , SUM(CASE WHEN chdd.account_id = 1004 THEN chdd.amount ELSE 0 END) AS expanded_wtax_amount
                     FROM check_disbursements chd
                     LEFT JOIN check_disbursement_details chdd ON chd.id = chdd.check_disbursement_id
                     LEFT JOIN chart_of_accounts coa ON chdd.account_id = coa.id

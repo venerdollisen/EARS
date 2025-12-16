@@ -296,6 +296,7 @@ class CashReceiptReportController extends Controller {
             $totals = [
                 'amount'       => 0,
                 'output_tax'   => 0,
+                'expanded'   => 0,
                 'net_purchase' => 0,
                 'diff'         => 0,
             ];
@@ -317,17 +318,17 @@ class CashReceiptReportController extends Controller {
                 // COMPUTED FIELDS
                 // ------------------------------------------------------
                 $invoiceAmount = (float) ($record['amount'] ?? 0);
-                $inputTax      = (($record['vat_subject'] ?? '') === 'VAT') ? $invoiceAmount * 0.12 : 0;
+                $inputTax      = $record['output_tax_amount']??0;
                 $netPurchase   = $invoiceAmount - $inputTax;
                 $diff          = 0;
 
                 // Attach computed fields
-                $record['output_tax']   = $inputTax;
+                $record['output_tax']   = $record['output_tax_amount'];
                 $record['net_purchase'] = $netPurchase;
                 $record['diff']         = $diff;
 
                 // NEW FIELDS (BLANK)
-                $record['expanded']     = '';
+                $record['expanded']     = $record['expanded_wtax_amount'];
                 $record['compensation'] = '';
 
                 // ------------------------------------------------------
@@ -358,6 +359,7 @@ class CashReceiptReportController extends Controller {
                 // Totals
                 $totals['amount']       += $invoiceAmount;
                 $totals['output_tax']   += $inputTax;
+                $totals['expanded']   += $record['expanded_wtax_amount'];
                 $totals['net_purchase'] += $netPurchase;
                 $totals['diff']         += $diff;
 

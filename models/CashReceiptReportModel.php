@@ -65,8 +65,7 @@ class CashReceiptReportModel extends BaseReportModel {
         try {
             $whereClause = $this->buildWhereClause($filters);
             
-            // Use GROUP BY to avoid duplicate rows from JOINs
-            $sql = "SELECT 
+              $sql = "SELECT 
                         cr.reference_no as reference_number,
                         cr.transaction_date,
                         cr.total_amount as amount,
@@ -77,14 +76,19 @@ class CashReceiptReportModel extends BaseReportModel {
                         GROUP_CONCAT(DISTINCT COALESCE(s.supplier_name, '') SEPARATOR ', ') as supplier_name,
                         GROUP_CONCAT(DISTINCT COALESCE(s.tin, '') SEPARATOR ', ') as supplier_tin,
                         GROUP_CONCAT(DISTINCT COALESCE(s.address, '') SEPARATOR ', ') as supplier_address,
-                        COALESCE(u.username, '') as created_by, s.vat_subject
+                        COALESCE(u.username, '') as created_by, s.vat_subject,
+                        -- Tax-specific totals from cash_receipt_details (account_id)
+                        SUM(CASE WHEN crd.account_id = 1001 THEN crd.amount ELSE 0 END) AS input_tax_amount,
+                        SUM(CASE WHEN crd.account_id = 1002 THEN crd.amount ELSE 0 END) AS output_tax_amount,
+                        SUM(CASE WHEN crd.account_id = 1003 THEN crd.amount ELSE 0 END) AS withholding_tax_compensation_amount,
+                        SUM(CASE WHEN crd.account_id = 1004 THEN crd.amount ELSE 0 END) AS expanded_wtax_amount
                     FROM cash_receipts cr
                     LEFT JOIN cash_receipt_details crd ON cr.id = crd.cash_receipt_id
                     LEFT JOIN chart_of_accounts coa ON crd.account_id = coa.id
                     LEFT JOIN suppliers s ON crd.supplier_id = s.id
                     LEFT JOIN users u ON cr.created_by = u.id
                     {$whereClause['where']}
-                    GROUP BY cr.id, cr.reference_no, cr.transaction_date, cr.total_amount, cr.payment_form, cr.status, u.username
+                    GROUP BY cr.id, cr.reference_no, cr.transaction_date, cr.total_amount, cr.payment_form, cr.status, u.username, s.vat_subject
                     ORDER BY cr.transaction_date DESC, cr.id DESC";
             
             $stmt = $this->db->prepare($sql);

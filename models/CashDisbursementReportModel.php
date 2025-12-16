@@ -25,6 +25,11 @@ class CashDisbursementReportModel extends BaseReportModel {
                         d.department_name,
                         u.username as created_by,
                         cd.created_at
+                        -- Tax-specific totals from cash_disbursement_details (account_id)
+                    , SUM(CASE WHEN cdd.account_id = 1001 THEN cdd.amount ELSE 0 END) AS input_tax_amount
+                    , SUM(CASE WHEN cdd.account_id = 1002 THEN cdd.amount ELSE 0 END) AS output_tax_amount
+                    , SUM(CASE WHEN cdd.account_id = 1003 THEN cdd.amount ELSE 0 END) AS withholding_tax_compensation_amount
+                    , SUM(CASE WHEN cdd.account_id = 1004 THEN cdd.amount ELSE 0 END) AS expanded_wtax_amount
                     FROM cash_disbursements cd
                     LEFT JOIN cash_disbursement_details cdd ON cd.id = cdd.cash_disbursement_id
                     LEFT JOIN chart_of_accounts coa ON cdd.account_id = coa.id
@@ -32,6 +37,7 @@ class CashDisbursementReportModel extends BaseReportModel {
                     LEFT JOIN departments d ON cdd.department_id = d.id
                     LEFT JOIN users u ON cd.created_by = u.id
                     {$whereClause['where']}
+                    
                     GROUP BY cd.id
                     ORDER BY cd.transaction_date DESC, cd.id DESC";
             
